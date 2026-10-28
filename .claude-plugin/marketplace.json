@@ -1,0 +1,11 @@
+{
+  "name": "wh-harness",
+  "owner": { "name": "Walter Dalla" },
+  "plugins": [
+    {
+      "name": "wh",
+      "source": "./plugins/wh",
+      "description": "Generic implementation harness: skills, agents and deterministic hooks driven by each project's .claude/perfil/."
+    }
+  ]
+}

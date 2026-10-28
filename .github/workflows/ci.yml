@@ -1,0 +1,30 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.9", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Manifests are valid JSON
+        run: |
+          python -m json.tool .claude-plugin/marketplace.json > /dev/null
+          python -m json.tool plugins/wh/.claude-plugin/plugin.json > /dev/null
+          python -m json.tool plugins/wh/hooks/hooks.json > /dev/null
+      - name: Every skill has frontmatter name and description
+        run: |
+          for f in plugins/wh/skills/*/SKILL.md; do
+            head -5 "$f" | grep -q '^name:' && head -8 "$f" | grep -q '^description:' || { echo "bad frontmatter: $f"; exit 1; }
+          done
+      - name: No personal paths
+        run: "! grep -rnE '/home/[a-z]+|C:\\\\Users' plugins examples tests"

@@ -1,0 +1,7 @@
+{
+  "glossario": "docs/GLOSSARY.md",
+  "features": "docs/features",
+  "indice_features": "docs/features/README.md",
+  "codegraph": ".codegraph/codegraph.db",
+  "idioma": "en"
+}
