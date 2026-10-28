@@ -1,6 +1,7 @@
 ---
 name: limpeza
 description: Limpa os .md do repositório depois de uma execução — apaga planos, prompts e faixas executados, leva o que ficou aberto (dívida, pendência do dono, convenção, termo) para a casa certa e atualiza os .md que citam código que mudou; no fim commita e remove as worktrees locais. Use no fim do /wh:implementation, no fim de um plano ou quando pedirem "limpar os docs", "limpeza". Casas, permanentes e poda vêm de .claude/perfil/limpeza.md.
+disable-model-invocation: true
 ---
 
 # Limpeza dos `.md`

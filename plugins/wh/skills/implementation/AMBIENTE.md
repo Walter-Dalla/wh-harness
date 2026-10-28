@@ -19,6 +19,18 @@ Só se o perfil § Serviço descartável existir. Da faixa de portas do `_comum`
 | `preflight.sh --base <hash> [--branch <b>] [--port <p>] [--lane <faixa.md>] [--protected <a,b>]` | `impl-dev` e `impl-qa`, antes de qualquer `git reset`/`branch` | confere worktree de agente, branch, worktree limpa, base existente, porta livre, faixa e quadro; `PREFLIGHT FALHOU` = `BLOQUEADO`, sem tocar em nada |
 | `escopo.sh <faixa.md> <base> [<ref>]` | `impl-dev` no fim, orquestrador antes do merge | arquivos mudados × `Dono de:`/`Pode tocar`/`União:` da faixa (caminhos entre crases); `FORA:` = a faixa conserta antes do merge |
 
+## RTK (saída do Bash)
+
+Com `rtk` instalado, toda saída do Bash chega condensada: o RTK guarda o sinal (erros, contagens, caminhos, exit code) e tira o ruído. Regras para todo agente:
+
+- Trate a saída como o resultado completo; não repita o comando "para ver inteiro".
+- Junte comandos relacionados numa chamada (`cmd1 && cmd2`, ou `;`) em vez de uma chamada por comando: cada turno custa mais que a saída.
+- Saída truncada diz no próprio texto como recuperar o resto; siga esse caminho.
+- `rtk proxy <cmd>` só quando a saída vier inutilizável: vazia quando devia ter algo, contradizendo o exit code, ou truncada sem caminho de recuperação.
+- Mesmo com RTK, filtre na origem o que é grande (`2>&1 | tail -30`, `grep -E`): os comandos do perfil § Testes e § Checks já vêm filtrados.
+
+Sem `rtk` no PATH: saída crua; os filtros do perfil continuam obrigatórios.
+
 ## Estados
 
 Toda resposta de agente e toda linha `FIM` do quadro termina num destes estados, com a evidência ao lado:

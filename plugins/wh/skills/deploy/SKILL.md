@@ -1,6 +1,7 @@
 ---
 name: deploy
 description: Publica o repositório atual em produção e verifica a URL pública; também rollback, backup/restore, rotação de segredo e setup inicial do servidor. Use para deploy, publicar, release, "subir para produção/servidor", rollback. Alvo, registro, comandos e falhas conhecidas vêm de .claude/perfil/deploy.md.
+disable-model-invocation: true
 ---
 
 # Deploy

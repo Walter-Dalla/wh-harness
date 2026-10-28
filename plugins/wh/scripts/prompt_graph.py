@@ -13,6 +13,7 @@ import glob
 import hashlib
 import json
 import os
+import pathlib
 import re
 import sqlite3
 import sys
@@ -20,7 +21,7 @@ import unicodedata
 
 CONFIG = os.path.join('.claude', 'perfil', 'contexto.json')
 CACHE_DIR = os.environ.get('WH_CACHE_DIR') or os.path.join(os.path.expanduser('~'), '.cache', 'walter-harness')
-GRAPH_VERSION = 1
+GRAPH_VERSION = 2
 MAX_NGRAM = 5
 DEFAULTS = {
     'glossario': 'docs/GLOSSARIO.md',
@@ -56,6 +57,8 @@ W_KEYWORD, W_ALIAS, W_SYMBOL, W_GLOSS = 3.0, 3.0, 2.0, 1.0
 KIND_RANK = {'class': 0, 'interface': 1, 'struct': 1, 'enum': 1, 'route': 2, 'method': 3, 'property': 4,
              'constant': 5, 'enum_member': 6, 'field': 6, 'function': 3}
 BACKTICK = re.compile(r'`([^`]+)`')
+# Pasta ou arquivo de teste: tests/, spec/, __tests__/, *Tests.cs, *.test.ts, *_test.go…
+TEST_PATH = re.compile(r'(^|/)(tests?|specs?|__tests__)(/|$)|(tests?|spec)\.[a-z]+$|_test\.[a-z]+$', re.I)
 IDENT = re.compile(r'^[A-Za-z_][A-Za-z0-9_.]*$')
 
 
@@ -211,13 +214,13 @@ def resolve_symbols(root, cfg, names):
     db = os.path.join(root, cfg['codegraph'])
     if names and os.path.exists(db):
         try:
-            con = sqlite3.connect('file:' + db + '?mode=ro', uri=True, timeout=1)
+            con = sqlite3.connect(pathlib.Path(db).resolve().as_uri() + '?mode=ro', uri=True, timeout=1)
             rows = con.execute('SELECT name, kind, file_path, start_line FROM nodes WHERE name IN (%s)'
                                % ','.join('?' * len(names)), list(names)).fetchall()
             con.close()
         except sqlite3.Error:
             rows = []
-        for name, kind, path, line in sorted(rows, key=lambda r: ('test' in r[2].lower(), KIND_RANK.get(r[1], 9), len(r[2]))):
+        for name, kind, path, line in sorted(rows, key=lambda r: (bool(TEST_PATH.search(r[2])), KIND_RANK.get(r[1], 9), len(r[2]))):
             found.setdefault(name, '%s:%d' % (path, line))
     pattern = re.compile(r'^class_name\s+(\w+)', re.M)
     for g in cfg['class_name_globs']:
@@ -388,9 +391,15 @@ def render(graph, cfg, prompt, explain=False):
     if not lines:
         out = ''
     else:
-        out = '[wh:prompt-graph] ' + lb['head'] + '\n' + '\n'.join(lines)
-        if len(out) > cfg['max_chars']:
-            out = out[:cfg['max_chars'] - 1] + '…'
+        out = '[wh:prompt-graph] ' + lb['head']
+        for line in lines:  # só linhas inteiras dentro do teto; a primeira que não cabe é cortada, as outras saem
+            if len(out) + 1 + len(line) <= cfg['max_chars']:
+                out += '\n' + line
+            else:
+                room = cfg['max_chars'] - len(out) - 2
+                if room >= 20:
+                    out += '\n' + line[:room].rstrip() + '…'
+                break
     if explain:
         sys.stderr.write('hits=%s\nfeatures=%s\n' % (hits, ranked[:8]))
     return out

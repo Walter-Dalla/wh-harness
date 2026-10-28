@@ -2,7 +2,7 @@
 
 ## Retro (cada faixa e o orquestrador)
 
-Siga a skill de retro do usuário em `~/.claude/skills/retro/SKILL.md`, se existir; sem ela, procure candidatos nestas categorias: navegação, checagem automática, padrão de código, steering doc, economia de ferramenta, no-op, acesso a informação, sobre a própria sessão, de memória (sem reler logs grandes). O passo "apresentar ao usuário" vira o arquivo `<raiz>/.impl/<slug>/retros/<faixa|orquestrador>.md` (≤ 40 linhas, ≤ 6 candidatos); nenhuma proposta é aplicada.
+`Skill(wh:retro, "arquivo: <caminho>")` sobre a própria sessão, de memória (sem reler logs grandes). O passo "apresentar ao usuário" da skill vira o arquivo `<raiz>/.impl/<slug>/retros/<faixa|orquestrador>.md` (≤ 40 linhas, ≤ 6 candidatos); nenhuma proposta é aplicada.
 
 ```markdown
 # Retro · <faixa> · <data>

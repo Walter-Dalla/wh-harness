@@ -14,7 +14,7 @@ A regra que segura as duas metades: **a skill tem o procedimento, o perfil tem o
 | Peça | Caminho | Papel |
 |---|---|---|
 | Plugin `wh` | `plugins/wh/` (marketplace `wh-harness`) | tudo o que é genérico; comandos `/wh:<skill>`, agentes `wh:<agente>` |
-| Skills genéricas | `plugins/wh/skills/<skill>/SKILL.md` | procedimento (`implementation`, `limpeza`, `deploy`, `start-app`, `qa-visual`, `feature-docs`, `brainstorm`, `perfil`) |
+| Skills genéricas | `plugins/wh/skills/<skill>/SKILL.md` | procedimento (`implementation`, `limpeza`, `deploy`, `start-app`, `qa-visual`, `feature-docs`, `brainstorm`, `perfil`, `retro`; a `retro` não tem perfil: é só procedimento) |
 | Modelo do perfil da skill | `plugins/wh/skills/<skill>/PERFIL.md` | quais seções `##` o perfil daquela skill precisa ter |
 | Modelo do perfil comum | `plugins/wh/skills/perfil/COMUM.md` | seções que toda skill usa |
 | Gerador de perfil | `plugins/wh/skills/perfil/SKILL.md` (`/wh:perfil <skill>`) | escreve ou completa os perfis a partir dos modelos e do repo |
@@ -64,6 +64,8 @@ A cada prompt enviado, o Claude Code roda o hook `UserPromptSubmit` do plugin `w
 ```
 python3 -I "${CLAUDE_PLUGIN_ROOT}/scripts/prompt_graph.py"     (timeout 5 s)
 ```
+
+O comando usa `python3`; num Windows nativo sem esse nome (`python`/`py`), edite `hooks.json` do plugin instalado ou crie um alias `python3` no PATH.
 
 O script recebe o evento em JSON pelo stdin (`prompt`, `cwd`), casa o texto contra um grafo do domínio e devolve `hookSpecificOutput.additionalContext`. Esse texto entra no contexto do modelo junto com o prompt. Não há LLM, rede nem aleatoriedade: o mesmo prompt com as mesmas fontes produz sempre a mesma saída.
 
@@ -187,7 +189,7 @@ No projeto novo:
    }
    ```
 
-   Para fixar uma versão, acrescente `"ref": "v0.2.0"` ao `source`. Sem `ref`, o projeto acompanha o `main`.
+   Para fixar uma versão, acrescente `"ref": "v0.3.0"` ao `source`. Sem `ref`, o projeto acompanha o `main`.
 8. **Valide** antes de abrir sessão (ver §6). Depois, commite `.claude/perfil/` e `.claude/settings.json`.
 9. **Abra uma sessão nova.** Hooks e plugins carregam no início da sessão.
 
@@ -277,7 +279,7 @@ Seções lidas: frontmatter `aliases`, `# Título`, `## Símbolos de entrada` (s
 ```bash
 H=~/walter-harness/plugins/wh/scripts/prompt_graph.py   # no clone do harness
 
-# Testes do próprio harness (stdlib, sem dependências)
+# Testes do próprio harness (stdlib, sem dependências): hook, escopo.sh e preflight.sh
 python3 -m unittest discover -s ~/walter-harness/tests
 
 # Reconstrói e mostra o tamanho do grafo
@@ -320,6 +322,8 @@ Para desligar só numa sessão: `WH_PROMPT_GRAPH=0 claude`. Para desligar no pro
 4. Suba `version` em `plugins/wh/.claude-plugin/plugin.json` e crie a tag `v<versão>`.
 
 **Novo hook genérico:** script em `plugins/wh/scripts/` e uma entrada em `plugins/wh/hooks/hooks.json` usando `${CLAUDE_PLUGIN_ROOT}`. O que depender do projeto vem de um arquivo em `.claude/perfil/`; sem esse arquivo, o hook sai em silêncio. Um hook nunca bloqueia: exceção vai para o stderr. Teste em `tests/` contra `examples/demo/`.
+
+**Novo script de shell:** `bash -n` e `shellcheck -S warning` rodam no CI; um teste em `tests/test_scripts.py` monta um repo temporário e exercita o script.
 
 **Novo agente:** `plugins/wh/agents/<nome>.md`; quem o chama usa `subagent_type: "wh:<nome>"` e passa `PLUGIN_ROOT` no prompt.
 

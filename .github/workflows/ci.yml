@@ -16,6 +16,10 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Unit tests
         run: python -m unittest discover -s tests -v
+      - name: Shell scripts parse and pass shellcheck
+        run: |
+          for f in plugins/wh/skills/*/scripts/*.sh; do bash -n "$f"; done
+          shellcheck -S warning plugins/wh/skills/*/scripts/*.sh
       - name: Manifests are valid JSON
         run: |
           python -m json.tool .claude-plugin/marketplace.json > /dev/null

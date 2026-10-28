@@ -8,12 +8,15 @@ set -u
 lane=${1:?arquivo da faixa}; base=${2:?base}; ref=${3:-HEAD}
 [ -r "$lane" ] || { echo "ESCOPO FALHOU: arquivo da faixa ilegível: $lane"; exit 2; }
 
-globs() { grep -E "$1" "$lane" | grep -o '`[^`]*`' | tr -d '`'; }
-mapfile -t own < <(globs '^Dono de:')
-mapfile -t may < <(globs 'Pode tocar')
-mapfile -t union < <(globs 'União:')
+# Só o cabeçalho da faixa (antes do primeiro "## "); os três rótulos podem dividir a mesma linha.
+head=$(sed -n '1,/^## /p' "$lane")
+globs() { grep -E "$1" <<< "$head" | sed -E "$2" | grep -o '`[^`]*`' | tr -d '`'; }
+mapfile -t own < <(globs '^Dono de:' 's/(Pode tocar|União:).*//')
+mapfile -t may < <(globs 'Pode tocar' 's/.*Pode tocar[^`]*//; s/União:.*//')
+mapfile -t union < <(globs 'União:' 's/.*União://')
 [ ${#own[@]} -gt 0 ] || { echo "ESCOPO FALHOU: nenhum caminho entre crases na linha 'Dono de:' de $lane"; exit 2; }
 
+# shellcheck disable=SC2053  # o lado direito é glob de propósito
 matches() { local f=$1; shift; local g; for g in "$@"; do [[ $f == $g ]] && return 0; done; return 1; }
 
 out=0

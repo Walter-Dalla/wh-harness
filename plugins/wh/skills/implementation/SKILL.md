@@ -28,6 +28,7 @@ Todo subagente roda, quando instalados, com o caveman **ultracave** ligado, a sa
 
 Autonomia: direto ao commit e ao PR. Você só pergunta ao dono na fase 2 (e numa consulta `DONO:` que para uma faixa). Saída longa de subagente (diff, prints) fica nos arquivos dele; você lê os relatórios. O merge do PR é do dono.
 **Limite de subagentes:** no máximo **3 subagentes vivos ao mesmo tempo**, o enriquecedor incluído (ele fica vivo a tarefa inteira: sobram 2 vagas para faixas `impl-dev` e QAs `impl-qa`). Faixa, QA de código ou QA final só dispara quando há vaga; o que não cabe espera, na ordem do plano. Motivo: gasto de tokens.
+**Modelo dos subagentes:** o `model` de cada `Agent(...)` vem do perfil § Modelos (regra do dono por papel: enriquecedor, faixa mecânica, faixa estrutural, QA); seção `—` = `"opus"`.
 **Esforço dos subagentes:** nunca passe `effort` no `Agent(...)`, e nenhuma definição de agente fixa `effort` no frontmatter: cada subagente roda no esforço padrão do modelo dele.
 
 ## 1. Ambiente
@@ -45,7 +46,7 @@ Autonomia: direto ao commit e ao PR. Você só pergunta ao dono na fase 2 (e num
 
 Quem enriquece é o subagente `impl-enrich`, o arquiteto da tarefa: ele faz a análise técnica, escreve o plano e fica vivo até o PR para responder às dúvidas dos desenvolvedores. Você faz a ponte com o dono.
 
-1. **Analisar:** `Agent(subagent_type: "wh:impl-enrich", model: "opus", prompt: "Etapa: analisar. Repo: <raiz absoluta>. Perfil: <raiz>/.claude/perfil/implementation.md e _comum.md. Slug: <slug>. Pedido: <o do dono, literal>.")`, sem `isolation` (só lê o repo e escreve em `.impl/<slug>/`) e sem `name`. **Guarde o id do agente**: toda etapa seguinte o retoma por `SendMessage`, com a análise na memória dele.
+1. **Analisar:** `Agent(subagent_type: "wh:impl-enrich", model: <perfil § Modelos; sem regra, "opus">, prompt: "Etapa: analisar. Repo: <raiz absoluta>. Perfil: <raiz>/.claude/perfil/implementation.md e _comum.md. Slug: <slug>. Pedido: <o do dono, literal>.")`, sem `isolation` (só lê o repo e escreve em `.impl/<slug>/`) e sem `name`. **Guarde o id do agente**: toda etapa seguinte o retoma por `SendMessage`, com a análise na memória dele.
 2. **Dúvidas:** resposta `PERGUNTAS` = uma só `AskUserQuestion` com todas, nas opções que ele trouxe (mais a confirmação do perfil, se você o escreveu). Repasse as respostas por `SendMessage` com "Etapa: planejar. Respostas: …"; `SEM PERGUNTAS` = mande "Etapa: planejar" direto.
 3. **Conferir:** leia a `ANALISE.md` e o `PLANO.md`. Item sem arquivo, símbolo, tipo ou Aceite executável, escolha de desenho sem o porquê, ou decisão apoiada só em afirmação `inferida`, volta a ele numa mensagem.
 
@@ -104,7 +105,7 @@ Saída: .impl/<slug>/qa/<faixa|codigo>.md. Retro: .impl/<slug>/retros/qa-<faixa|
 Reteste: <"não" | ids dos achados corrigidos>.
 ```
 
-`Agent(subagent_type: "wh:impl-qa", isolation: "worktree", model: "opus", prompt: …)`, sem `name`.
+`Agent(subagent_type: "wh:impl-qa", isolation: "worktree", model: <perfil § Modelos; sem regra, "opus">, prompt: …)`, sem `name`.
 
 Achados (tipo e severidade no arquivo do QA): **bug, padrão, nome ou teste ausente** = corrigir (um commit por achado, `QA-<faixa>-NN: …`), crítica e alta primeiro. Depois, **um** reteste por `impl-qa` só quando houve achado de código crítico, alto ou médio, cobrindo esses ids e os abertos na mesma área (um conserto pode mudar as condições do vizinho); conserto só de severidade baixa ou só de teste, você confere rodando o Aceite do item. O que volta vai para o relatório. **Risco não demonstrado, decisão contestada ou juízo de produto** = relatório, sem código.
 
@@ -129,7 +130,7 @@ Achados: a mesma triagem da fase 4, reteste incluído; bug em muitas áreas vira
 
 ## 6. Fechar
 
-1. **Retros:** mande ao enriquecedor "Etapa: retro. Arquivo: <raiz>/.impl/<slug>/retros/enriquecedor.md". **Sua retro:** siga a skill de retro do usuário em `~/.claude/skills/retro/SKILL.md`, se existir; sem ela, procure candidatos nestas categorias: navegação, checagem automática, padrão de código, steering doc, economia de ferramenta, no-op, acesso a informação (leia o arquivo: a skill é só do dono e o Skill tool a recusa) sobre esta sessão; o resultado vai em `<raiz>/.impl/<slug>/retros/orquestrador.md`, no formato de [`RELATORIO.md`](RELATORIO.md).
+1. **Retros:** mande ao enriquecedor "Etapa: retro. Arquivo: <raiz>/.impl/<slug>/retros/enriquecedor.md". **Sua retro:** `Skill(wh:retro, "arquivo: <raiz>/.impl/<slug>/retros/orquestrador.md")` sobre esta sessão, no formato de [`RELATORIO.md`](RELATORIO.md).
 2. **Relatório:** junte as retros e escreva o relatório no caminho do perfil § Relatório por [`RELATORIO.md`](RELATORIO.md); commit `docs: relatório <slug>`.
 3. **Docs de fim** (perfil § Docs de fim: changelog, mapa de features, pendências, glossário, convenções), commit `docs: <slug>`, com as "notas para os docs" dos relatórios das faixas à mão. Pendência aberta (dívida, decisão do dono, convenção nova, termo novo) vai para o doc que o perfil nomeia; sem doc para ela, fica no relatório.
 4. **Limpeza:** apague `<raiz>/.impl/<slug>/` (já consolidado no relatório) e qualquer `.md` de plano ou prompt que a tarefa criou dentro do repo; `.md` do repo que cita código que mudou (nome, caminho, rota) é atualizado.

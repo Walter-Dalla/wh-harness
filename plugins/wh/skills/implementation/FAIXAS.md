@@ -40,7 +40,7 @@ Retro: .impl/<slug>/retros/<faixa>.md (relativo à sua worktree).
 Continuação: <"do zero" | PROGRESS.md anterior + branch de onde seguir + o que mudou na base ou na faixa desde então>.
 ```
 
-`Agent(subagent_type: "wh:impl-dev", isolation: "worktree", model: "opus", prompt: …)`, **sem `name`** (com nome vira colega de agent team). Guarde o id de agente de cada faixa (consertos e respostas voltam a ele). Enquanto rodam, espere os relatórios; os diffs você lê no merge.
+`Agent(subagent_type: "wh:impl-dev", isolation: "worktree", model: <perfil § Modelos; sem regra, "opus">, prompt: …)`, **sem `name`** (com nome vira colega de agent team). Guarde o id de agente de cada faixa (consertos e respostas voltam a ele). Enquanto rodam, espere os relatórios; os diffs você lê no merge.
 
 **Ponte de dúvidas:** mensagem `PERGUNTA …` de uma faixa = consulta ao enriquecedor (fase 2 do `SKILL.md`, "Consultas durante a tarefa"), resposta ao id da faixa. Relatório `AGUARDANDO: …` = a mesma consulta; a resposta retoma a faixa.
 

@@ -3,7 +3,8 @@
 A generic, modular implementation harness for [Claude Code](https://claude.com/claude-code). One plugin (`wh`) holds the *procedures* — skills, subagents and hooks that work in any repository. Each project holds only its *facts* — commands, ports, docs, limits, glossary — in `.claude/perfil/`. The plugin injects those facts at run time, so the same `/wh:implementation` drives a .NET + Godot game, a Node API or a Python service without one line of project-specific text in the skill.
 
 ```
-/plugin install wh --marketplace Walter-Dalla/wh-harness
+claude plugin marketplace add Walter-Dalla/wh-harness
+claude plugin install wh@wh-harness
 ```
 
 ## Why
@@ -83,12 +84,13 @@ A project opts in with `.claude/perfil/contexto.json`. Without that file the hoo
 |---|---|
 | `plugins/wh/skills/implementation` | end-to-end task: enricher subagent writes analysis + plan, small tasks run inline, large ones split into lanes run by `wh:impl-dev` in parallel worktrees, `wh:impl-qa` reviews each lane and runs a final QA, then retros, report and PR |
 | `plugins/wh/skills/perfil` | writes or completes a project's profiles from the templates |
+| `plugins/wh/skills/retro` | retrospective of a session: candidates to improve the agent's environment (used by every `/wh:implementation` agent) |
 | `plugins/wh/skills/limpeza` | post-run cleanup: deletes executed plans, moves open items to their home docs, updates docs that cite changed code |
 | `plugins/wh/skills/{deploy,start-app,qa-visual,feature-docs,brainstorm}` | the rest of the lifecycle, each driven by its own profile |
 | `plugins/wh/agents` | `impl-enrich`, `impl-dev`, `impl-qa` |
 | `plugins/wh/scripts/prompt_graph.py` | the enrichment hook (Python stdlib only) |
 | `examples/demo` | a tiny bakery project with a glossary and feature map |
-| `tests/` | `python3 -m unittest discover -s tests` |
+| `tests/` | `python3 -m unittest discover -s tests` (hook, `escopo.sh`, `preflight.sh`) |
 | [`docs/MANUAL.pt-BR.md`](docs/MANUAL.pt-BR.md) | full technical manual (Portuguese) |
 
 Skills and their templates are written in Portuguese. The hook handles both languages: section names in PT or EN, output labels via `"idioma": "en"`.

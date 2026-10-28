@@ -35,6 +35,7 @@ case "$cur" in
 esac
 if [ -n "$branch" ]; then
   IFS=',' read -ra prot <<< "$protected"
+  # shellcheck disable=SC2053
   for p in "${prot[@]}"; do [[ $branch == $p ]] && err "branch esperada protegida: $branch"; done
 fi
 
@@ -48,8 +49,16 @@ elif ! git cat-file -e "$base^{commit}" 2>/dev/null; then err "base $base não e
 fi
 
 # Porta livre (serviço descartável da faixa ou do QA final).
+port_busy() {  # 0 ocupada, 1 livre, 2 sem ferramenta para conferir
+  if command -v ss >/dev/null 2>&1; then ss -ltnH "sport = :$1" 2>/dev/null | grep -q .
+  elif command -v lsof >/dev/null 2>&1; then lsof -nP -iTCP:"$1" -sTCP:LISTEN >/dev/null 2>&1
+  else return 2; fi
+}
 if [ -n "$port" ] && [ "$port" != "—" ]; then
-  if ss -ltnH "sport = :$port" 2>/dev/null | grep -q .; then err "porta $port ocupada"; fi
+  port_busy "$port"; case $? in
+    0) err "porta $port ocupada" ;;
+    2) echo "PREFLIGHT AVISO: sem ss nem lsof; porta $port não conferida" ;;
+  esac
 fi
 
 # Arquivo da faixa e o quadro ao lado dele.
