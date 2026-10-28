@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python: ["3.9", "3.12"]
+        python: ["3.11", "3.13"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -27,4 +27,4 @@ jobs:
             head -5 "$f" | grep -q '^name:' && head -8 "$f" | grep -q '^description:' || { echo "bad frontmatter: $f"; exit 1; }
           done
       - name: No personal paths
-        run: "! grep -rnE '/home/[a-z]+|C:\\\\Users' plugins examples tests"
+        run: "! grep -rnIE --exclude-dir=__pycache__ '/home/[a-z]+|C:\\\\Users' plugins examples tests"
