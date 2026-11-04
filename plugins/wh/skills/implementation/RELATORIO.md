@@ -6,7 +6,7 @@
 
 ```markdown
 # Retro · <faixa> · <data>
-| # | Severidade | Categoria (navegação, checagem automática, padrão de código, steering doc, economia de ferramenta, no-op, acesso a informação) | Evidência (o que aconteceu, comando/arquivo) | Proposta (arquivo e mudança) | Quem aplica (repo / dono, fora do repo) |
+| # | Severidade | Categoria | Evidência (o que aconteceu, comando/arquivo) | Proposta (arquivo e mudança) | Quem aplica (repo / dono, fora do repo) |
 ```
 
 ## Relatório (perfil § Relatório, padrão `docs/relatorios/<data>-<slug>.md`, só o orquestrador)

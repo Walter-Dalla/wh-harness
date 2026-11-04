@@ -1,11 +1,11 @@
 ---
 name: start-app
-description: Sobe, para ou reinicia o app do repositório atual (serviços e cliente) e confere que respondem. Use para rodar, iniciar, parar, reiniciar ou testar o app de ponta a ponta. Serviços, portas, cliente e estado vêm de .claude/perfil/start-app.md.
+description: Sobe, para ou reinicia o app do repositório (serviços e cliente) e confere que respondem. Use para rodar, iniciar, parar ou reiniciar o app.
 ---
 
 # Subir o app
 
-Perfil do projeto (injetado; `PERFIL_AUSENTE` = `Skill(wh:perfil, "start-app")` antes de seguir):
+Perfil do projeto (injetado; `PERFIL_AUSENTE` = `Skill(wh:perfil, "start-app")` e depois `Read` dos dois arquivos, porque a injeção abaixo rodou antes de o perfil existir):
 !`cat .claude/perfil/_comum.md .claude/perfil/start-app.md 2>/dev/null || echo PERFIL_AUSENTE`
 
 Da raiz do checkout do `_comum § Clone`, com a toolchain do `_comum § Toolchain`. Esta skill é a interativa: usa as portas do dono (`_comum § Portas`); as outras skills sobem o próprio serviço em porta própria.

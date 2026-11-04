@@ -28,8 +28,8 @@ def git(cwd, *args):
     return subprocess.run(['git', *args], cwd=cwd, env=GIT_ENV, capture_output=True, text=True, check=True).stdout.strip()
 
 
-def run(script, cwd, *args):
-    p = subprocess.run(['bash', script, *args], cwd=cwd, env=GIT_ENV, capture_output=True, text=True)
+def run(script, cwd, *args, **env):
+    p = subprocess.run(['bash', script, *args], cwd=cwd, env=dict(GIT_ENV, **env), capture_output=True, text=True)
     return p.returncode, p.stdout
 
 
@@ -92,7 +92,7 @@ class ScriptsTest(unittest.TestCase):
 
     def exclude_progress(self):
         with open(os.path.join(self.repo, '.git', 'info', 'exclude'), 'a', encoding='utf-8') as fh:
-            fh.write('.impl/\nPROGRESS.md\n')
+            fh.write('.impl/\n')
 
     def test_preflight_refuses_the_main_checkout(self):
         self.exclude_progress()
@@ -111,6 +111,16 @@ class ScriptsTest(unittest.TestCase):
         self.assertEqual(code, 0, out)
         self.assertIn('PREFLIGHT OK', out)
 
+    def test_preflight_accepts_a_custom_agent_branch_prefix(self):
+        self.exclude_progress()
+        wt = os.path.join(self.tmp, 'wt')
+        git(self.repo, 'worktree', 'add', '-q', '-b', 'agent-xyz', wt, 'main')
+        code, out = run(PREFLIGHT, wt, '--base', self.base)
+        self.assertEqual(code, 1)
+        self.assertIn("não é worktree-agent-*", out)
+        code, out = run(PREFLIGHT, wt, '--base', self.base, WH_AGENT_BRANCH_PREFIX='agent-')
+        self.assertEqual(code, 0, out)
+
     def test_preflight_reports_each_problem(self):
         wt = os.path.join(self.tmp, 'wt')
         git(self.repo, 'worktree', 'add', '-q', '-b', 'worktree-agent-abc', wt, 'main')
@@ -120,7 +130,7 @@ class ScriptsTest(unittest.TestCase):
                         '--lane', os.path.join(self.tmp, 'nao-existe.md'))
         self.assertEqual(code, 1)
         for msg in ('protegida: main', 'alterações locais', 'base deadbeef não existe', 'faixa ilegível',
-                    'PROGRESS.md não está'):
+                    '.impl/ não está'):
             self.assertIn(msg, out)
 
 

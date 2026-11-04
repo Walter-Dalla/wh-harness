@@ -1,11 +1,11 @@
 ---
 name: feature-docs
-description: Cria ou atualiza o mapa de features do repositório (como cada feature funciona, suas regras e interações): classifica a entrada num arquivo existente ou novo e mantém o índice e os dois lados de cada interação em sincronia. Use quando uma feature é adicionada, muda ou sai, quando pedirem "documentar/atualizar a doc da feature", "adicionar ao mapa de features", ou no fim de uma tarefa de feature. Pasta, modelo e verificação vêm de .claude/perfil/feature-docs.md.
+description: Cria ou atualiza o mapa de features do repositório (índice + um arquivo por feature, interações em sincronia). Use quando uma feature nasce, muda ou sai.
 ---
 
 # Mapa de features
 
-Perfil do projeto (injetado; `PERFIL_AUSENTE` = `Skill(wh:perfil, "feature-docs")` antes de seguir):
+Perfil do projeto (injetado; `PERFIL_AUSENTE` = `Skill(wh:perfil, "feature-docs")` e depois `Read` dos dois arquivos, porque a injeção abaixo rodou antes de o perfil existir):
 !`cat .claude/perfil/_comum.md .claude/perfil/feature-docs.md 2>/dev/null || echo PERFIL_AUSENTE`
 
 O mapa é um dicionário sob demanda para agentes: um índice + um arquivo por feature (perfil § Pasta). Agentes leem o índice e só o arquivo de que precisam, então cada arquivo fica curto, exato e autocontido. Idioma e formato: perfil § Formato.

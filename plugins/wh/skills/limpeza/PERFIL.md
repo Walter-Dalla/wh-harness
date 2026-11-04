@@ -15,7 +15,7 @@ Onde vivem os `.md` que uma execução lê como instrução: pasta de plano (`.i
 Arquivos e pastas que a limpeza nunca apaga (changelog, status, mapa de features, glossário, pendências, relatórios, convenções, `CLAUDE.md`, `.claude/**`, baselines de lint).
 
 ## Poda
-Regra de poda do changelog: idade (dias) que vira linha resumida com `git show <hash>:CHANGELOG.md`, tamanho máximo (KB) e como avança. `—` = sem poda.
+Regra de poda do changelog: idade (dias) que vira linha resumida com `git show <hash>:CHANGELOG.md`, tamanho máximo (KB) e como avança. Relatórios de tarefa (pasta do perfil do `implementation` § Relatório): quantos ficam ou idade máxima; o podado sai do repo (`git show <hash>:<arquivo>` recupera). `—` = sem poda.
 
 ## Relatório
 Pasta dos relatórios de execução (`docs/relatorios/<data>-<slug>.md`): o que já está neles não se duplica.

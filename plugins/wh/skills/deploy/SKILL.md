@@ -1,12 +1,12 @@
 ---
 name: deploy
-description: Publica o repositório atual em produção e verifica a URL pública; também rollback, backup/restore, rotação de segredo e setup inicial do servidor. Use para deploy, publicar, release, "subir para produção/servidor", rollback. Alvo, registro, comandos e falhas conhecidas vêm de .claude/perfil/deploy.md.
+description: Publica o repositório em produção e verifica a URL pública; rollback, backup/restore, rotação de segredo, setup do servidor. Alvo e comandos vêm de .claude/perfil/deploy.md.
 disable-model-invocation: true
 ---
 
 # Deploy
 
-Perfil do projeto (injetado; `PERFIL_AUSENTE` = `Skill(wh:perfil, "deploy")` antes de seguir):
+Perfil do projeto (injetado; `PERFIL_AUSENTE` = `Skill(wh:perfil, "deploy")` e depois `Read` dos dois arquivos, porque a injeção abaixo rodou antes de o perfil existir):
 !`cat .claude/perfil/_comum.md .claude/perfil/deploy.md 2>/dev/null || echo PERFIL_AUSENTE`
 
 Da raiz do checkout do `_comum § Clone`. Sua parte termina onde o perfil § Acesso diz: por padrão você publica o artefato e verifica a URL pública; tudo no servidor é do dono, em bloco copiável, e você espera o relato dele. Nada de `ssh`, `scp` ou chave quando o perfil não dá acesso.

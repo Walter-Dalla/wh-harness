@@ -10,14 +10,24 @@ lane=${1:?arquivo da faixa}; base=${2:?base}; ref=${3:-HEAD}
 
 # Só o cabeçalho da faixa (antes do primeiro "## "); os três rótulos podem dividir a mesma linha.
 head=$(sed -n '1,/^## /p' "$lane")
-globs() { grep -E "$1" <<< "$head" | sed -E "$2" | grep -o '`[^`]*`' | tr -d '`'; }
+# Caminho terminado em `/` vale a pasta inteira.
+globs() { grep -E "$1" <<< "$head" | sed -E "$2" | grep -o '`[^`]*`' | tr -d '`' | sed 's|/$|/*|'; }
 mapfile -t own < <(globs '^Dono de:' 's/(Pode tocar|União:).*//')
 mapfile -t may < <(globs 'Pode tocar' 's/.*Pode tocar[^`]*//; s/União:.*//')
 mapfile -t union < <(globs 'União:' 's/.*União://')
 [ ${#own[@]} -gt 0 ] || { echo "ESCOPO FALHOU: nenhum caminho entre crases na linha 'Dono de:' de $lane"; exit 2; }
 
 # shellcheck disable=SC2053  # o lado direito é glob de propósito
-matches() { local f=$1; shift; local g; for g in "$@"; do [[ $f == $g ]] && return 0; done; return 1; }
+# `X/**/*.cs` também casa `X/a.cs` (o `**/` aceita zero pastas); `<arquivo>.uid` do Godot segue o dono do arquivo.
+matches() {
+  local f=$1; shift; local g
+  for g in "$@"; do
+    [[ $f == $g ]] && return 0
+    [[ $f == ${g//\*\*\//} ]] && return 0
+    [[ $f == *.uid && ${f%.uid} == $g ]] && return 0
+  done
+  return 1
+}
 
 out=0
 while IFS= read -r f; do

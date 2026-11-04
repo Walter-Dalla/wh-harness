@@ -26,12 +26,13 @@ common=$(cd "$top" && git rev-parse --path-format=absolute --git-common-dir)
 # Worktree de agente: nunca o checkout principal.
 [ "$gitdir" != "$common" ] || err "não é uma worktree de agente: $top é o checkout principal"
 
-# Branch: a worktree recém-criada (worktree-agent-*) ou a branch da faixa (retomada).
+# Branch: a worktree recém-criada (prefixo do isolation "worktree" do Claude Code, hoje worktree-agent-; WH_AGENT_BRANCH_PREFIX troca) ou a branch da faixa (retomada).
+prefix=${WH_AGENT_BRANCH_PREFIX:-worktree-agent-}
 cur=$(git branch --show-current)
 case "$cur" in
-  worktree-agent-*) ;;
+  "$prefix"*) ;;
   '') err "HEAD solto" ;;
-  *) [ -n "$branch" ] && [ "$cur" = "$branch" ] || err "branch atual '$cur' não é worktree-agent-* nem a esperada '${branch:-<nenhuma>}'" ;;
+  *) [ -n "$branch" ] && [ "$cur" = "$branch" ] || err "branch atual '$cur' não é ${prefix}* nem a esperada '${branch:-<nenhuma>}'" ;;
 esac
 if [ -n "$branch" ]; then
   IFS=',' read -ra prot <<< "$protected"
@@ -67,8 +68,8 @@ if [ -n "$lane" ]; then
   [ -e "$(dirname "$lane")/QUADRO.md" ] || err "quadro ausente: $(dirname "$lane")/QUADRO.md"
 fi
 
-# PROGRESS.md fica fora do git em toda worktree.
-grep -qx 'PROGRESS.md' "$common/info/exclude" 2>/dev/null || err "PROGRESS.md não está em $common/info/exclude (fase 1 do /wh:implementation)"
+# .impl/ (quadro, checkpoint, saídas) fica fora do git em todo checkout do clone.
+grep -qx '.impl/' "$common/info/exclude" 2>/dev/null || err ".impl/ não está em $common/info/exclude (fase 1 do /wh:implementation)"
 
 [ $fail -eq 0 ] && echo "PREFLIGHT OK: $top @ $cur, base $base${port:+, porta $port}"
 exit $fail

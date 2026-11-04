@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 -I \"${CLAUDE_PLUGIN_ROOT}/scripts/prompt_graph.py\"",
+            "command": "f=.claude/perfil/contexto.json; d=$PWD; while :; do if [ -f \"$d/$f\" ]; then python3 -I \"${CLAUDE_PLUGIN_ROOT}/scripts/prompt_graph.py\"; break; fi; [ \"$d\" = / ] && break; d=$(dirname \"$d\"); done",
             "timeout": 5
           }
         ]

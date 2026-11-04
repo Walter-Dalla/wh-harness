@@ -114,3 +114,34 @@ class PromptGraphTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class PromptGraphLimitsTest(PromptGraphTest):
+    def test_max_chars_keeps_whole_lines(self):
+        cfg = pg.load_cfg(self.repo)
+        full = pg.render(pg.load_graph(self.repo, cfg), cfg, 'the showcase shows a sold out croissant but the order still goes through')
+        cfg['max_chars'] = len(full.split('\n')[0]) + 1 + len(full.split('\n')[1]) + 5
+        out = pg.render(pg.load_graph(self.repo, cfg), cfg, 'the showcase shows a sold out croissant but the order still goes through')
+        self.assertEqual(out.split('\n')[:2], full.split('\n')[:2])
+        self.assertLessEqual(len(out), cfg['max_chars'])
+        self.assertEqual(len(out.split('\n')), 2)  # the third line does not fit, so it is dropped, not cut mid-word
+
+    def test_class_name_globs_resolve_godot_scripts(self):
+        os.makedirs(os.path.join(self.repo, 'client', 'ui'))
+        with open(os.path.join(self.repo, 'client', 'ui', 'stamp_card.gd'), 'w', encoding='utf-8') as fh:
+            fh.write('extends Control\nclass_name StampCardView\n')
+        cfg_path = os.path.join(self.repo, '.claude', 'perfil', 'contexto.json')
+        with open(cfg_path, encoding='utf-8') as fh:
+            cfg = json.load(fh)
+        cfg['class_name_globs'] = ['client/**/*.gd']
+        with open(cfg_path, 'w', encoding='utf-8') as fh:
+            json.dump(cfg, fh)
+        loyalty = os.path.join(self.repo, 'docs', 'features', 'loyalty.md')
+        with open(loyalty, encoding='utf-8') as fh:
+            text = fh.read()
+        with open(loyalty, 'w', encoding='utf-8') as fh:
+            fh.write(text.replace('## Entry symbols\n', '## Entry symbols\n\nClient: `StampCardView`.\n', 1))
+        cfg = pg.load_cfg(self.repo)
+        graph = pg.load_graph(self.repo, cfg)
+        self.assertEqual(graph['simbolos']['StampCardView'], 'client/ui/stamp_card.gd:1')
+        self.assertIn('StampCardView client/ui/stamp_card.gd:1', pg.render(graph, cfg, 'the stamp card rewards a free item'))

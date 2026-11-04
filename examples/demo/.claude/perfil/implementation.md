@@ -1,5 +1,7 @@
 # Perfil do /wh:implementation
 
+Exemplo ilustrativo: a demo não tem código; os comandos abaixo mostram só o formato de cada seção. Num repo real, cada linha vem de uma fonte do repo.
+
 ## Build
 `dotnet build 2>&1 | tail -30` (sem warning novo = verde). [inferido]
 

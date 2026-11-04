@@ -84,13 +84,14 @@ A project opts in with `.claude/perfil/contexto.json`. Without that file the hoo
 |---|---|
 | `plugins/wh/skills/implementation` | end-to-end task: enricher subagent writes analysis + plan, small tasks run inline, large ones split into lanes run by `wh:impl-dev` in parallel worktrees, `wh:impl-qa` reviews each lane and runs a final QA, then retros, report and PR |
 | `plugins/wh/skills/perfil` | writes or completes a project's profiles from the templates |
+| `plugins/wh/skills/adotar` | onboards a repository: a deterministic diagnostic (`scripts/checar.py`) plus the steps that create the map, profiles, glossary, feature map, `contexto.json` and `settings.json` |
 | `plugins/wh/skills/retro` | retrospective of a session: candidates to improve the agent's environment (used by every `/wh:implementation` agent) |
 | `plugins/wh/skills/limpeza` | post-run cleanup: deletes executed plans, moves open items to their home docs, updates docs that cite changed code |
 | `plugins/wh/skills/{deploy,start-app,qa-visual,feature-docs,brainstorm}` | the rest of the lifecycle, each driven by its own profile |
 | `plugins/wh/agents` | `impl-enrich`, `impl-dev`, `impl-qa` |
 | `plugins/wh/scripts/prompt_graph.py` | the enrichment hook (Python stdlib only) |
 | `examples/demo` | a tiny bakery project with a glossary and feature map |
-| `tests/` | `python3 -m unittest discover -s tests` (hook, `escopo.sh`, `preflight.sh`) |
+| `tests/` | `python3 -m unittest discover -s tests` (hook, `escopo.sh`, `preflight.sh`, `checar.py`) |
 | [`docs/MANUAL.pt-BR.md`](docs/MANUAL.pt-BR.md) | full technical manual (Portuguese) |
 
 Skills and their templates are written in Portuguese. The hook handles both languages: section names in PT or EN, output labels via `"idioma": "en"`.
@@ -98,7 +99,7 @@ Skills and their templates are written in Portuguese. The hook handles both lang
 ## Use it in a project
 
 1. Install the plugin. As a consumer: `claude plugin marketplace add Walter-Dalla/wh-harness`, then `claude plugin install wh@wh-harness`. As a maintainer: `claude plugin marketplace add ~/walter-harness`, so edits take effect in the next session.
-2. In the repo, run `/wh:perfil` to generate `.claude/perfil/_comum.md` and one profile per skill, and review the `[inferido]` lines.
+2. In the repo, run `/wh:adotar`: it diagnoses what is missing and creates it (steps 2–4 below), or do it by hand: run `/wh:perfil` to generate `.claude/perfil/_comum.md` and one profile per skill, and review the `[inferido]` lines.
 3. Optional: add a glossary, a feature map and `.claude/perfil/contexto.json` to turn on `prompt-graph`.
 4. Declare the plugin in the project's `.claude/settings.json`, so teammates are offered it when they trust the folder:
 
@@ -111,7 +112,7 @@ Skills and their templates are written in Portuguese. The hook handles both lang
    }
    ```
 
-Optional integrations, used when installed: [caveman](https://github.com/JuliusBrussee/caveman) (terse subagent output), `rtk` (condensed shell output) and `codegraph` (code navigation).
+Optional integrations, used when installed: `rtk` (condensed shell output) and `codegraph` (code navigation).
 
 ## Origin
 

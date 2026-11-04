@@ -14,12 +14,13 @@ A regra que segura as duas metades: **a skill tem o procedimento, o perfil tem o
 | Peça | Caminho | Papel |
 |---|---|---|
 | Plugin `wh` | `plugins/wh/` (marketplace `wh-harness`) | tudo o que é genérico; comandos `/wh:<skill>`, agentes `wh:<agente>` |
-| Skills genéricas | `plugins/wh/skills/<skill>/SKILL.md` | procedimento (`implementation`, `limpeza`, `deploy`, `start-app`, `qa-visual`, `feature-docs`, `brainstorm`, `perfil`, `retro`; a `retro` não tem perfil: é só procedimento) |
+| Skills genéricas | `plugins/wh/skills/<skill>/SKILL.md` | procedimento (`implementation`, `limpeza`, `deploy`, `start-app`, `qa-visual`, `feature-docs`, `brainstorm`, `perfil`, `retro`, `adotar`; `retro` e `adotar` não têm perfil: são só procedimento) |
 | Modelo do perfil da skill | `plugins/wh/skills/<skill>/PERFIL.md` | quais seções `##` o perfil daquela skill precisa ter |
 | Modelo do perfil comum | `plugins/wh/skills/perfil/COMUM.md` | seções que toda skill usa |
 | Gerador de perfil | `plugins/wh/skills/perfil/SKILL.md` (`/wh:perfil <skill>`) | escreve ou completa os perfis a partir dos modelos e do repo |
+| Adoção | `plugins/wh/skills/adotar/SKILL.md` (`/wh:adotar`) + `scripts/checar.py` | diagnostica um repo novo e cria o que falta (§4); o script é o diagnóstico determinístico |
 | Agentes | `plugins/wh/agents/impl-enrich.md`, `impl-dev.md`, `impl-qa.md` | subagentes do `/wh:implementation` (`subagent_type: "wh:impl-dev"`…) |
-| Hooks | `plugins/wh/hooks/hooks.json`, `plugins/wh/scripts/` | hooks determinísticos; hoje o `prompt-graph` |
+| Hooks | `plugins/wh/hooks/hooks.json`, `plugins/wh/scripts/` | hooks determinísticos; hoje o `prompt-graph` (só roda com `contexto.json` no cwd ou acima) |
 | Perfil comum do projeto | `<repo>/.claude/perfil/_comum.md` | clone, toolchain, git, portas, navegação, docs, limites |
 | Perfil de cada skill | `<repo>/.claude/perfil/<skill>.md` | só o que aquela skill usa; cita `_comum § X` em vez de repetir |
 | Fontes do hook | `<repo>/.claude/perfil/contexto.json` | liga o `prompt-graph` no projeto e diz onde estão glossário, features e CodeGraph |
@@ -42,7 +43,7 @@ Fluxo:
 1. O usuário chama `/wh:implementation …` na raiz do repo.
 2. O `cat` roda no diretório da sessão. Se os perfis existem, o conteúdo deles entra na skill; se não, entra a palavra `PERFIL_AUSENTE`.
 3. Com `PERFIL_AUSENTE` ou com seção faltando, a skill chama `Skill(wh:perfil, "<skill>")` antes de seguir.
-4. A skill `perfil` compara o arquivo com o modelo (`PERFIL.md` ou `COMUM.md`), procura cada seção faltante nas fontes do repo (em ordem: `CLAUDE.md`/`AGENTS.md` e docs apontados, perfis já escritos, skill antiga do projeto, `.github/workflows/*`, scripts de build, `README`) e escreve uma linha por fato com a fonte entre colchetes (`[ci: tests.yml]`, `[inferido]`…). Linhas `[inferido]` vão para o dono em uma única pergunta. Seção sem resposta fica `—`, e a skill pula a fase que depende dela, avisando que pulou.
+4. A skill `perfil` compara o arquivo com o modelo (`PERFIL.md` ou `COMUM.md`), procura cada seção faltante nas fontes do repo (em ordem: `CLAUDE.md`/`AGENTS.md` e docs apontados, perfis já escritos, skill antiga do projeto, `.github/workflows/*`, scripts de build, `README`) e escreve uma linha por fato com a fonte entre colchetes (`[ci: tests.yml]`, `[inferido]`…). Linhas `[inferido]` vão para o dono em uma única pergunta (com o argumento `adiar`, quem chamou pergunta: o `/wh:implementation` junta com as dúvidas do enriquecedor). Seção sem resposta fica `—`, e a skill pula a fase que depende dela, avisando que pulou.
 
 Os caminhos para arquivos do próprio plugin (modelos, scripts, a retro) são escritos como `${CLAUDE_PLUGIN_ROOT}/skills/…`; o Claude Code troca a variável pelo caminho real ao carregar a skill (testado; `${CLAUDE_SKILL_DIR}` também funciona). Os agentes não recebem a variável resolvida: o `/wh:implementation` passa `PLUGIN_ROOT=<caminho>` no prompt de cada subagente.
 
@@ -62,7 +63,7 @@ Consequências práticas:
 A cada prompt enviado, o Claude Code roda o hook `UserPromptSubmit` do plugin `wh`:
 
 ```
-python3 -I "${CLAUDE_PLUGIN_ROOT}/scripts/prompt_graph.py"     (timeout 5 s)
+<sobe a árvore a partir do cwd até achar .claude/perfil/contexto.json; sem ele, nem chama o Python> python3 -I "${CLAUDE_PLUGIN_ROOT}/scripts/prompt_graph.py"     (timeout 5 s)
 ```
 
 O comando usa `python3`; num Windows nativo sem esse nome (`python`/`py`), edite `hooks.json` do plugin instalado ou crie um alias `python3` no PATH.
@@ -158,7 +159,7 @@ Duas formas de ter o plugin:
   claude plugin list | grep -A4 'wh@'            # Status: ✔ enabled
   ```
 
-No projeto novo:
+No projeto novo, o caminho curto é `/wh:adotar` na raiz: ele roda o diagnóstico (`plugins/wh/skills/adotar/scripts/checar.py --root .`, uma linha `OK`/`FALTA`/`AVISO` por peça), chama `/wh:perfil`, semeia glossário e mapa de features quando o repo tem domínio, escreve `contexto.json`, `settings.json` e `.gitignore`, e valida com o `--build` e um `--query` (§6). `/wh:adotar checar` só diagnostica. O que ele não faz: `codegraph init` (decisão do dono), commit, e engordar o mapa de features (`/wh:feature-docs`). Os passos abaixo são o mesmo caminho, à mão:
 
 1. **Mapa do repo.** Tenha um `CLAUDE.md` (ou `AGENTS.md`) na raiz que diga onde cada coisa mora e quais docs ler. Ele é a primeira fonte da skill `perfil`.
 2. **Perfil comum e das skills.** Na raiz do repo, rode `/wh:perfil` (todas as skills) ou `/wh:perfil implementation` (uma só). Revise `.claude/perfil/_comum.md` e `.claude/perfil/<skill>.md`, responda às linhas `[inferido]` e confira se `## Limites` diz o que nenhum agente toca (produção, segredos, banco do dono).
@@ -189,7 +190,7 @@ No projeto novo:
    }
    ```
 
-   Para fixar uma versão, acrescente `"ref": "v0.3.0"` ao `source`. Sem `ref`, o projeto acompanha o `main`.
+   Para fixar uma versão, acrescente `"ref": "<tag>"` ao `source`, com uma tag que existe (`git tag` no harness). Sem `ref`, o projeto acompanha o `main`.
 8. **Valide** antes de abrir sessão (ver §6). Depois, commite `.claude/perfil/` e `.claude/settings.json`.
 9. **Abra uma sessão nova.** Hooks e plugins carregam no início da sessão.
 
@@ -334,3 +335,6 @@ Para desligar só numa sessão: `WH_PROMPT_GRAPH=0 claude`. Para desligar no pro
 - **Termo com nome muito comum** (ex.: "café", "nível") casa com frequência. Seu peso já é dividido entre as features que aponta, mas ainda aparece em "Termos".
 - **Só os nomes resolvem.** O CodeGraph liga nome a `arquivo:linha`; a resolução não segue chamadas. A navegação no código continua sendo `codegraph explore`.
 - **O hook não vê skill invocada por outra skill**, só o texto que o usuário enviou.
+- **Worktree de agente sem mudança é removida ao fim dele** (comportamento do `isolation: "worktree"`): por isso saída de QA, retro e checkpoint vão em caminho absoluto em `<raiz>/.impl/<slug>/`, e o QA de código roda no clone, sem worktree.
+- **Radical de plural é PT-BR.** Em inglês (`idioma: en`) ele corta o `s` final de qualquer palavra (`status` → `statu`, `process` → `proces`); como prompt e chaves passam pelo mesmo radical, o casamento funciona, mas plurais irregulares do inglês não casam.
+- **Dependências do Claude Code não documentadas (a verificar a cada versão):** o `preflight.sh` espera a branch `worktree-agent-*` que o `isolation: "worktree"` cria (`WH_AGENT_BRANCH_PREFIX` troca o prefixo); o orquestrador espera o caminho da worktree no resultado do `Agent` (fallback: `git worktree list --porcelain`); a resposta de um `SendMessage` chega ao agente na próxima chamada de ferramenta dele.
