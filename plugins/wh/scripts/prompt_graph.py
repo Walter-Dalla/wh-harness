@@ -293,7 +293,6 @@ def signature(root, cfg):
 
 
 def load_graph(root, cfg, force=False):
-    os.makedirs(CACHE_DIR, exist_ok=True)
     cache = os.path.join(CACHE_DIR, hashlib.sha1(root.encode()).hexdigest()[:16] + '.json')
     sig = signature(root, cfg)
     if not force and os.path.exists(cache):
@@ -306,10 +305,14 @@ def load_graph(root, cfg, force=False):
             pass
     data = build_graph(root, cfg)
     data['sig'] = sig
-    tmp = cache + '.%d.tmp' % os.getpid()
-    with open(tmp, 'w', encoding='utf-8') as fh:
-        json.dump(data, fh, ensure_ascii=False, separators=(',', ':'))
-    os.replace(tmp, cache)
+    try:
+        os.makedirs(CACHE_DIR, exist_ok=True)
+        tmp = cache + '.%d.tmp' % os.getpid()
+        with open(tmp, 'w', encoding='utf-8') as fh:
+            json.dump(data, fh, ensure_ascii=False, separators=(',', ':'))
+        os.replace(tmp, cache)
+    except OSError:
+        pass  # cache sem escrita (home só-leitura, sandbox): o grafo vale só para este prompt
     return data
 
 

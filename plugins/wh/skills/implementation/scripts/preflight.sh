@@ -6,6 +6,9 @@
 set -u
 base='' branch='' port='' lane='' protected='main,master,develop'
 while [ $# -gt 0 ]; do
+  case "$1" in --base|--branch|--port|--lane|--protected)
+    [ $# -ge 2 ] || { echo "PREFLIGHT FALHOU: $1 sem valor"; exit 2; } ;;
+  esac
   case "$1" in
     --base) base=$2; shift 2 ;;
     --branch) branch=$2; shift 2 ;;
@@ -68,8 +71,8 @@ if [ -n "$lane" ]; then
   [ -e "$(dirname "$lane")/QUADRO.md" ] || err "quadro ausente: $(dirname "$lane")/QUADRO.md"
 fi
 
-# .impl/ (quadro, checkpoint, saídas) fica fora do git em todo checkout do clone.
-grep -qx '.impl/' "$common/info/exclude" 2>/dev/null || err ".impl/ não está em $common/info/exclude (fase 1 do /wh:implementation)"
+# .impl/ (quadro, checkpoint, saídas) fica fora do git: pelo info/exclude do clone (fase 1) ou pelo .gitignore do repo.
+git -C "$top" check-ignore -q .impl/preflight 2>/dev/null || err ".impl/ não é ignorado pelo git (fase 1 do /wh:implementation: $common/info/exclude)"
 
 [ $fail -eq 0 ] && echo "PREFLIGHT OK: $top @ $cur, base $base${port:+, porta $port}"
 exit $fail

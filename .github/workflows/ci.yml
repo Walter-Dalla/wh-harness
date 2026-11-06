@@ -25,6 +25,11 @@ jobs:
           python -m json.tool .claude-plugin/marketplace.json > /dev/null
           python -m json.tool plugins/wh/.claude-plugin/plugin.json > /dev/null
           python -m json.tool plugins/wh/hooks/hooks.json > /dev/null
+      - name: Plugin and marketplace pass claude plugin validate
+        run: |
+          npm install -g @anthropic-ai/claude-code
+          claude plugin validate ./plugins/wh --strict
+          claude plugin validate . --strict
       - name: Every skill has frontmatter name and description
         run: |
           for f in plugins/wh/skills/*/SKILL.md; do

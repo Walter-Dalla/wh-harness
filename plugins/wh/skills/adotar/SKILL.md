@@ -28,7 +28,7 @@ Confirme a raiz: `git rev-parse --show-toplevel` igual ao cwd. Monorepo: a adoç
 
 ## 3. Perfis
 
-`Skill(wh:perfil)` sem argumento: escreve `_comum.md`, `implementation.md` e os perfis das skills cuja fonte existe no repo. Dono presente: a skill `perfil` confirma as linhas `[inferido]`; sessão sem dono (`-p`, subagente): passe `adiar` e liste as linhas no relatório final. Depois, `Read` dos arquivos escritos.
+`Skill(wh:perfil)` sem argumento: escreve `_comum.md`, `implementation.md` e os perfis das skills cuja fonte existe no repo. Dono presente: a skill `perfil` confirma as linhas `[inferido]`; sessão sem dono (`-p`, subagente): `Skill(wh:perfil, "adiar")` e liste as linhas no relatório final. Depois, `Read` dos arquivos escritos.
 
 `AVISO skill antiga` (pasta `.claude/skills/<skill>` com o mesmo nome de uma skill do plugin): a skill `perfil` leva os fatos para o perfil e remove a pasta (§ 4 dela). Confira que removeu.
 
@@ -46,7 +46,7 @@ Só quando o repo tem domínio para isso (entidades, serviços, telas com nome d
 
 ## 5. `contexto.json`, `settings.json`, `.gitignore`
 
-- `FALTA contexto.json`: escreva `.claude/perfil/contexto.json` com só as chaves cujo valor difere do padrão (`glossario`, `features`, `indice_features`, `codegraph`, `idioma`; tabela completa em `docs/MANUAL.pt-BR.md` § 5.3 do repo `wh-harness`). Sem glossário nem features (pulou a § 4): não crie o arquivo e diga "hook desligado: sem fontes".
+- `FALTA contexto.json`: escreva `.claude/perfil/contexto.json` com só as chaves cujo valor difere do padrão (`glossario`, `features`, `indice_features`, `codegraph`, `idioma`; padrões e demais chaves em `DEFAULTS` de `${CLAUDE_PLUGIN_ROOT}/scripts/prompt_graph.py`). Sem glossário nem features (pulou a § 4): não crie o arquivo e diga "hook desligado: sem fontes".
 - `FALTA settings.json`: crie ou complete `.claude/settings.json` (merge: nunca apague chaves existentes) com `extraKnownMarketplaces.wh-harness` (`source: github`, `repo: Walter-Dalla/wh-harness`) e `enabledPlugins."wh@wh-harness": true`. Fixar versão (`"ref": "<tag>"`) só se o dono pediu.
 - `.gitignore`: acrescente `.codegraph/` se não está. `.impl/` fica no `.git/info/exclude` (o `/wh:implementation` faz); não o ponha no `.gitignore`.
 - `AVISO codegraph` com CLI presente e índice ausente: **não rode** `codegraph init`; indexar é decisão do dono. Entra no relatório como pendência com o comando.

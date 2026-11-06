@@ -8,12 +8,12 @@ O que o `/wh:implementation` e os agentes `impl-*` precisam saber do repositóri
 # Perfil do /wh:implementation
 
 ## Build
-`<comando>` (sem warning novo = verde). Saída filtrada: `… 2>&1 | tail -30`.
+`<comando em modo quieto>` (sem warning novo = verde). O veredito é o exit code deste comando: sem pipe.
 
 ## Testes
 Área: `<comando com <filtro>>` (ex.: `dotnet test X --filter "FullyQualifiedName~<filtro>"`, `npm test -- <filtro>`, `pytest -k <filtro>`).
-Suíte: `<comando completo> 2>&1 | grep -E "<padrão de passou/falhou>"`.
-Aceite de item = o teste de área que só fica verde com o item feito; teste novo quando não há. Relógio e aleatoriedade injetados onde o repo injeta.
+Suíte: `<comando completo em modo quieto>` (ex.: `dotnet test --nologo -v q`, `pytest -q`, `python3 -m unittest -q`). O veredito é o exit code deste comando: sem pipe (`| grep` e `| tail` devolvem o exit do filtro). Filtro só para ler uma saída longa, em linha à parte: `<comando> 2>&1 | tail -30`.
+Aceite de item = o teste de área que só fica verde com o item feito (refactor: a suíte da área, verde antes e depois); teste novo quando não há. Relógio e aleatoriedade injetados onde o repo injeta.
 
 ## Checks
 Lint/typecheck/formatação/verificação de cliente, um por linha, com o comando e quando roda (por item, fim de faixa, QA final). Ex.: `deploy/lint.sh` (QA final, sem `--update`).
@@ -43,7 +43,7 @@ Onde entra o que a tarefa muda ou deixa aberto: changelog, status de features, p
 Pasta dos relatórios de tarefa (padrão `docs/relatorios/<data>-<slug>.md`).
 
 ## Modelos
-Regra do dono para modelo e esforço por papel (enriquecedor, faixa mecânica, faixa estrutural, QA). `—` = padrão da skill.
+Regra do dono para o modelo de cada papel (enriquecedor, faixa mecânica, faixa estrutural, QA). `—` = padrão da skill.
 
 ## Comandos na worktree
 Aprendido pelas execuções: o que o guard de isolamento recusa e a forma que passa. `—` no primeiro perfil; as retros acrescentam.

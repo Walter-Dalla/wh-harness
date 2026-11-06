@@ -22,12 +22,16 @@ mapfile -t union < <(globs 'União:' 's/.*União://')
 matches() {
   local f=$1; shift; local g
   for g in "$@"; do
+    [[ $f == "$g" ]] && return 0  # literal: caminho com caractere de glob (`app/[id]/page.tsx`)
     [[ $f == $g ]] && return 0
     [[ $f == ${g//\*\*\//} ]] && return 0
     [[ $f == *.uid && ${f%.uid} == $g ]] && return 0
   done
   return 1
 }
+
+# quotepath=off: nome com acento sai como está, não escapado entre aspas.
+changed() { git -c core.quotepath=off diff --name-only "$base...$ref"; }
 
 out=0
 while IFS= read -r f; do
@@ -37,7 +41,7 @@ while IFS= read -r f; do
   elif [ ${#may[@]} -gt 0 ] && matches "$f" "${may[@]}"; then echo "AVISO esperado: $f"
   else echo "FORA: $f"; out=1
   fi
-done < <(git diff --name-only "$base...$ref")
+done < <(changed)
 
-[ $out -eq 0 ] && echo "ESCOPO OK: $(git diff --name-only "$base...$ref" | wc -l) arquivos dentro da faixa"
+[ $out -eq 0 ] && echo "ESCOPO OK: $(changed | wc -l) arquivos dentro da faixa"
 exit $out

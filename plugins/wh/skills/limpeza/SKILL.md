@@ -46,10 +46,10 @@ Para cada `.md` afetado do passo 1: nome velho pelo novo, o apagado sai, a regra
 
 ## 6. Worktrees
 
-Só as worktrees **da execução** (`git worktree list --porcelain`): com `slug`, as de branch `impl/<slug>-*`; sem ele, as de branch já mergeada em `HEAD` (`git branch --merged HEAD`). Qualquer outra (dono, outra sessão) fica como está e é listada na resposta. Para cada uma:
+Só as worktrees **da execução** (`git worktree list --porcelain`): com `slug`, as de branch `impl/<slug>-*` e as de agente (`worktree-agent-*`) cujo HEAD é um commit de `<principal>..impl/<slug>` (a branch `worktree-agent-*` sai junto: `git branch -D`); sem ele, as de branch já mergeada em `HEAD` (`git branch --merged HEAD`). Qualquer outra (dono, outra sessão) fica como está e é listada na resposta. Para cada uma:
 
 - **Mudança não commitada** (`git -C <wt> status --porcelain` com saída): `git -C <wt> add -A`. Conteúdo já salvo quando `git -C <wt> diff --cached --quiet <ref> -- <arquivos do status>` passa para `<principal>` ou para `origin/<branch>`; aí a worktree segue direto para remoção. Senão, commit na branch da worktree no formato do perfil § Commit (detached HEAD: `git -C <wt> switch -c wt/<pasta>` antes).
-- **Remoção:** `git worktree remove <wt>`; `--force` só para mudança já salva em `<principal>` ou `origin/<branch>`; travada, `git worktree unlock <wt>` antes. A branch fica. No fim, `git worktree prune`.
+- **Remoção:** `git worktree remove <wt>`; `--force` só para mudança já salva em `<principal>` ou `origin/<branch>`; travada, `git worktree unlock <wt>` antes. A branch `impl/…` fica. No fim, `git worktree prune`.
 
 **Feito quando nenhuma worktree da execução sobra em `git worktree list`, e toda mudança das removidas está num commit, em `<principal>` ou em `origin/<branch>`.**
 

@@ -19,6 +19,8 @@ A regra que segura as duas metades: **a skill tem o procedimento, o perfil tem o
 | Modelo do perfil comum | `plugins/wh/skills/perfil/COMUM.md` | seções que toda skill usa |
 | Gerador de perfil | `plugins/wh/skills/perfil/SKILL.md` (`/wh:perfil <skill>`) | escreve ou completa os perfis a partir dos modelos e do repo |
 | Adoção | `plugins/wh/skills/adotar/SKILL.md` (`/wh:adotar`) + `scripts/checar.py` | diagnostica um repo novo e cria o que falta (§4); o script é o diagnóstico determinístico |
+| Apoio do `/wh:implementation` | `plugins/wh/skills/implementation/TRIAGEM.md`, `FAIXAS.md`, `AMBIENTE.md`, `RELATORIO.md`, `scripts/` | triagem e formato do plano; faixas paralelas; ambiente e protocolo dos agentes; retros e relatório; `preflight.sh` e `escopo.sh` |
+| Manifestos | `plugins/wh/.claude-plugin/plugin.json` e `icon.png`, `plugins/wh/README.md`, `.claude-plugin/marketplace.json` | o que o diretório de plugins lê; `claude plugin validate --strict` nos dois (§6) |
 | Agentes | `plugins/wh/agents/impl-enrich.md`, `impl-dev.md`, `impl-qa.md` | subagentes do `/wh:implementation` (`subagent_type: "wh:impl-dev"`…) |
 | Hooks | `plugins/wh/hooks/hooks.json`, `plugins/wh/scripts/` | hooks determinísticos; hoje o `prompt-graph` (só roda com `contexto.json` no cwd ou acima) |
 | Perfil comum do projeto | `<repo>/.claude/perfil/_comum.md` | clone, toolchain, git, portas, navegação, docs, limites |
@@ -43,7 +45,7 @@ Fluxo:
 1. O usuário chama `/wh:implementation …` na raiz do repo.
 2. O `cat` roda no diretório da sessão. Se os perfis existem, o conteúdo deles entra na skill; se não, entra a palavra `PERFIL_AUSENTE`.
 3. Com `PERFIL_AUSENTE` ou com seção faltando, a skill chama `Skill(wh:perfil, "<skill>")` antes de seguir.
-4. A skill `perfil` compara o arquivo com o modelo (`PERFIL.md` ou `COMUM.md`), procura cada seção faltante nas fontes do repo (em ordem: `CLAUDE.md`/`AGENTS.md` e docs apontados, perfis já escritos, skill antiga do projeto, `.github/workflows/*`, scripts de build, `README`) e escreve uma linha por fato com a fonte entre colchetes (`[ci: tests.yml]`, `[inferido]`…). Linhas `[inferido]` vão para o dono em uma única pergunta (com o argumento `adiar`, quem chamou pergunta: o `/wh:implementation` junta com as dúvidas do enriquecedor). Seção sem resposta fica `—`, e a skill pula a fase que depende dela, avisando que pulou.
+4. A skill `perfil` compara o arquivo com o modelo (`PERFIL.md` ou `COMUM.md`), procura cada seção faltante nas fontes do repo (em ordem: `CLAUDE.md`/`AGENTS.md` e docs apontados, perfis já escritos, skill antiga do projeto, `.github/workflows/*`, scripts de build, `README`) e escreve uma linha por fato com a fonte entre colchetes (`[ci: tests.yml]`, `[inferido]`…). Linhas `[inferido]` vão para o dono, uma pergunta por seção do perfil, até 4 por chamada (com o argumento `adiar`, quem chamou pergunta: o `/wh:implementation` junta com as dúvidas do enriquecedor). Seção sem resposta fica `—`, e a skill pula a fase que depende dela, avisando que pulou.
 
 Os caminhos para arquivos do próprio plugin (modelos, scripts, a retro) são escritos como `${CLAUDE_PLUGIN_ROOT}/skills/…`; o Claude Code troca a variável pelo caminho real ao carregar a skill (testado; `${CLAUDE_SKILL_DIR}` também funciona). Os agentes não recebem a variável resolvida: o `/wh:implementation` passa `PLUGIN_ROOT=<caminho>` no prompt de cada subagente.
 
@@ -150,14 +152,17 @@ Duas formas de ter o plugin:
   claude plugin install wh@wh-harness
   ```
 
-- **Mantenedor** (quem edita o harness): pelo diretório. O Claude Code lê o plugin direto da pasta, então uma edição vale na sessão seguinte, sem push.
+- **Mantenedor** (quem edita o harness): pelo diretório, sem push. O Claude Code copia o plugin para um cache: depois de editar, rode o `update` e abra uma sessão nova (sem ele, a sessão seguinte ainda carrega a versão antiga; visto no Claude Code 2.1.312).
 
   ```bash
   git clone https://github.com/Walter-Dalla/wh-harness ~/walter-harness
   claude plugin marketplace add ~/walter-harness
   claude plugin install wh@wh-harness
   claude plugin list | grep -A4 'wh@'            # Status: ✔ enabled
+  claude plugin update wh@wh-harness             # depois de cada edição no harness
   ```
+
+**Modelo da sessão do `/wh:implementation`.** O perfil § Modelos escolhe o modelo dos subagentes; o orquestrador roda no modelo da sessão, e é ele que paga a maior parte da conta (72–77% do custo nos dois runs do test-drive de 2026-10-28, com a sessão no modelo mais caro). Para tarefas do harness, abra a sessão com `claude --model opus`.
 
 No projeto novo, o caminho curto é `/wh:adotar` na raiz: ele roda o diagnóstico (`plugins/wh/skills/adotar/scripts/checar.py --root .`, uma linha `OK`/`FALTA`/`AVISO` por peça), chama `/wh:perfil`, semeia glossário e mapa de features quando o repo tem domínio, escreve `contexto.json`, `settings.json` e `.gitignore`, e valida com o `--build` e um `--query` (§6). `/wh:adotar checar` só diagnostica. O que ele não faz: `codegraph init` (decisão do dono), commit, e engordar o mapa de features (`/wh:feature-docs`). Os passos abaixo são o mesmo caminho, à mão:
 
@@ -166,7 +171,7 @@ No projeto novo, o caminho curto é `/wh:adotar` na raiz: ele roda o diagnóstic
 3. **Glossário** (opcional, mas é o que alimenta o hook). Crie `docs/GLOSSARIO.md` no formato da §5.1.
 4. **Mapa de features** (opcional). Crie `docs/features/README.md` e um arquivo por feature no formato da §5.2. A skill `/wh:feature-docs` mantém esse mapa depois que o perfil dela existir.
 5. **CodeGraph** (opcional). `codegraph init -y .` na raiz cria `.codegraph/`. Coloque `.codegraph/` no `.gitignore`.
-6. **Ligue o hook** criando `.claude/perfil/contexto.json`:
+6. **Ligue o hook** criando `.claude/perfil/contexto.json` (o `/wh:perfil` já o escreve quando o repo tem glossário ou mapa de features; sem nenhum dos dois ele responde "hook desligado: sem fontes"):
 
    ```json
    {
@@ -280,8 +285,12 @@ Seções lidas: frontmatter `aliases`, `# Título`, `## Símbolos de entrada` (s
 ```bash
 H=~/walter-harness/plugins/wh/scripts/prompt_graph.py   # no clone do harness
 
-# Testes do próprio harness (stdlib, sem dependências): hook, escopo.sh e preflight.sh
+# Testes do próprio harness (stdlib, sem dependências): hook, escopo.sh, preflight.sh, checar.py e referências de seção
 python3 -m unittest discover -s ~/walter-harness/tests
+
+# Manifestos (o CI roda os dois; não pedem login)
+claude plugin validate ~/walter-harness/plugins/wh --strict
+claude plugin validate ~/walter-harness --strict
 
 # Reconstrói e mostra o tamanho do grafo
 python3 -I $H --build --root .
@@ -303,6 +312,8 @@ echo '{"prompt":"o balcão não recebe porções","cwd":"'$PWD'"}' | python3 -I 
 | Símbolo aponta para o lugar errado | nome repetido no índice | use o nome mais específico em `## Símbolos de entrada` |
 | Aviso "Evite" falso | palavra entre aspas também é termo usado | o filtro já cobre termos próprios; senão, tire as aspas |
 | Grafo velho | não deveria acontecer (assinatura por mtime) | `--build`, ou apague `~/.cache/walter-harness/*.json` |
+
+**`/wh:implementation` em modo headless** (`claude -p "/wh:implementation …" --output-format stream-json`): a sessão não tem `AskUserQuestion`, então o orquestrador adota a opção recomendada de cada pergunta e lista as "Decisões tomadas sem o dono" no relatório. O stream traz mais de um objeto `result` (o orquestrador encerra o turno enquanto os subagentes rodam em background e é retomado a cada notificação): o resultado da tarefa é o **último** `result`.
 
 Para desligar só numa sessão: `WH_PROMPT_GRAPH=0 claude`. Para desligar no projeto: remova o `contexto.json`. Para desligar em tudo: `claude plugin disable wh@wh-harness`. O CodeGraph é aberto só para leitura (`mode=ro`); com o índice sendo gravado ao mesmo tempo, a consulta espera até 1 s e segue sem símbolos.
 
@@ -336,5 +347,11 @@ Para desligar só numa sessão: `WH_PROMPT_GRAPH=0 claude`. Para desligar no pro
 - **Só os nomes resolvem.** O CodeGraph liga nome a `arquivo:linha`; a resolução não segue chamadas. A navegação no código continua sendo `codegraph explore`.
 - **O hook não vê skill invocada por outra skill**, só o texto que o usuário enviou.
 - **Worktree de agente sem mudança é removida ao fim dele** (comportamento do `isolation: "worktree"`): por isso saída de QA, retro e checkpoint vão em caminho absoluto em `<raiz>/.impl/<slug>/`, e o QA de código roda no clone, sem worktree.
+- **Guard de isolamento da worktree de agente** (visto no Claude Code 2.1.312): recusa `Write`/`Edit` em caminho fora da worktree e recusa o Bash que ele não consegue conferir ("too complex to verify": comando composto que cita `git`, substituição `$(…)`, variável de ambiente na frente do comando, `env`, heredoc para interpretador, laço; lista em `AMBIENTE.md` § Bash na worktree de agente). Aceite que só roda fora da worktree leva a marca "só no clone" e é rodado pelo orquestrador. Por isso o orquestrador cria as pastas de `.impl/<slug>/` antes de disparar agentes, e os agentes gravam ali por `cat > <caminho> <<'EOF'`, um comando simples por chamada. Se a escrita falhar mesmo assim, o conteúdo volta na resposta do agente e o orquestrador grava.
+- **Continuação de faixa por agente novo** precisa do nome da branch livre: a worktree antiga o segura, então o orquestrador salva o que falta nela, remove-a e apaga a branch local antes de disparar (`FAIXAS.md` §3, passo 9).
+- **Prints do QA visual** nascem na worktree do QA final, que some com o agente: ele os copia para `.impl/<slug>/qa/visual/`, e o orquestrador leva para junto do relatório os que provam bug aberto.
+- **Outras dependências do Claude Code em uso:** subagente chama `Skill` (`wh:retro`, `wh:qa-visual`); `disable-model-invocation` esconde `implementation`, `deploy` e `brainstorm` do modelo (nenhuma skill as chama); hooks do projeto rodam em subagentes e worktrees (visto no 2.1.312).
+- **PR só com GitHub.** Sem `gh` autenticado ou com remote que não é GitHub, o `/wh:implementation` entra em modo sem PR na fase 1: entrega a branch no remote e o comando de merge.
+- **`.impl/<slug>/` some na limpeza.** A trilha da tarefa é o relatório. Para depurar o próprio harness, copie a pasta antes da fase 6 (ex.: um hook `PostToolUse` do projeto que a espelha, como no test-drive).
 - **Radical de plural é PT-BR.** Em inglês (`idioma: en`) ele corta o `s` final de qualquer palavra (`status` → `statu`, `process` → `proces`); como prompt e chaves passam pelo mesmo radical, o casamento funciona, mas plurais irregulares do inglês não casam.
-- **Dependências do Claude Code não documentadas (a verificar a cada versão):** o `preflight.sh` espera a branch `worktree-agent-*` que o `isolation: "worktree"` cria (`WH_AGENT_BRANCH_PREFIX` troca o prefixo); o orquestrador espera o caminho da worktree no resultado do `Agent` (fallback: `git worktree list --porcelain`); a resposta de um `SendMessage` chega ao agente na próxima chamada de ferramenta dele.
+- **Dependências do Claude Code não documentadas (a verificar a cada versão):** o `preflight.sh` espera a branch `worktree-agent-*` que o `isolation: "worktree"` cria (`WH_AGENT_BRANCH_PREFIX` troca o prefixo); o orquestrador espera o caminho da worktree no resultado do `Agent` (fallback: `git worktree list --porcelain`); a resposta de um `SendMessage` chega ao agente na próxima chamada de ferramenta dele; um `SendMessage` para um agente que já terminou o retoma com o contexto dele (é assim que o enriquecedor e os consertos de QA funcionam); as worktrees de agente nascem em `<repo>/.claude/worktrees/` (a fase 1 as põe no exclude).

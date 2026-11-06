@@ -103,6 +103,25 @@ class PromptGraphTest(unittest.TestCase):
         os.makedirs(sub)
         self.assertIn('orders.md', self.hook('the pickup slot is wrong for late orders', cwd=sub))
 
+    def test_hook_is_silent_with_invalid_config(self):
+        with open(os.path.join(self.repo, '.claude', 'perfil', 'contexto.json'), 'w', encoding='utf-8') as fh:
+            fh.write('{nope')
+        self.assertEqual(self.hook('the pickup slot is wrong for late orders'), '')
+
+    def test_hook_works_without_a_writable_cache(self):
+        blocker = os.path.join(self.tmp, 'arquivo')
+        with open(blocker, 'w') as fh:
+            fh.write('x')
+        out = self.hook('the pickup slot is wrong for late orders', WH_CACHE_DIR=os.path.join(blocker, 'cache'))
+        self.assertIn('docs/features/orders.md', json.loads(out)['hookSpecificOutput']['additionalContext'])
+
+    def test_corrupted_cache_is_rebuilt(self):
+        self.assertIn('orders.md', self.query('the pickup slot is wrong for late orders'))
+        for name in os.listdir(pg.CACHE_DIR):
+            with open(os.path.join(pg.CACHE_DIR, name), 'w') as fh:
+                fh.write('{"sig": ')
+        self.assertIn('orders.md', self.query('the pickup slot is wrong for late orders'))
+
     def test_cache_rebuilds_when_a_source_changes(self):
         self.assertEqual(self.query('a croissant recipe'), '')
         path = os.path.join(self.repo, 'docs', 'features', 'README.md')

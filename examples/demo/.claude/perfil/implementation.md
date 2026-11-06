@@ -3,11 +3,11 @@
 Exemplo ilustrativo: a demo não tem código; os comandos abaixo mostram só o formato de cada seção. Num repo real, cada linha vem de uma fonte do repo.
 
 ## Build
-`dotnet build 2>&1 | tail -30` (sem warning novo = verde). [inferido]
+`dotnet build --nologo -v q` (sem warning novo = verde; veredito pelo exit). [inferido]
 
 ## Testes
-Área: `dotnet test --filter "FullyQualifiedName~<filtro>" 2>&1 | grep -E "Passed!|Failed!|error"`. [inferido]
-Suíte: `dotnet test 2>&1 | grep -E "Passed!|Failed!|error"`. [inferido]
+Área: `dotnet test --nologo -v q --filter "FullyQualifiedName~<filtro>"`. [inferido]
+Suíte: `dotnet test --nologo -v q` (veredito pelo exit; para ler: `dotnet test 2>&1 | tail -30`). [inferido]
 Aceite de item = o teste de área que só fica verde com o item feito; teste novo quando não há.
 
 ## Checks

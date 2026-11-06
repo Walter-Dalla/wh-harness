@@ -1,5 +1,6 @@
 {
   "name": "wh-harness",
+  "description": "The wh plugin: a generic implementation harness for Claude Code whose skills, agents and hooks read each project's facts from .claude/perfil/.",
   "owner": { "name": "Walter Dalla" },
   "plugins": [
     {
