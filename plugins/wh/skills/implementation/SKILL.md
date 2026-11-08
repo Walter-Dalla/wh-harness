@@ -106,7 +106,7 @@ Reteste: <"não" | ids dos achados corrigidos>.
 
 `Agent(subagent_type: "wh:impl-qa", isolation: "worktree", model: "opus", prompt: …)`, sem `name`.
 
-Achados (tipo e severidade no arquivo do QA): **bug, padrão, nome ou teste ausente** = corrigir (um commit por achado, `QA-<faixa>-NN: …`), crítica e alta primeiro. Depois, **um** reteste por `impl-qa` só quando houve achado de código crítico, alto ou médio, cobrindo esses ids e os abertos na mesma área (um conserto pode mudar as condições do vizinho); conserto só de severidade baixa ou só de teste, você confere rodando o Aceite do item. O que volta vai para o relatório. **Risco não demonstrado, decisão contestada ou juízo de produto** = relatório, sem código.
+Achados (tipo e severidade no arquivo do QA): **bug, padrão, nome ou teste ausente** = corrigir (um commit por achado, `QA-<faixa>-NN: …`), crítica e alta primeiro. Depois, **um** reteste por `impl-qa` só quando houve achado de código crítico, alto ou médio, cobrindo esses ids e os abertos na mesma área (um conserto pode mudar as condições do vizinho); conserto só de severidade baixa ou só de teste, você confere rodando o Aceite do item. O que volta vai para o relatório. Achado crítico ou alto consertado depois desse reteste ganha um reteste curto só do id, ou entra no `Conferir:` do prompt do QA final. **Risco não demonstrado, decisão contestada ou juízo de produto** = relatório, sem código.
 
 **Feito quando todo achado está corrigido e retestado, ou registrado para o relatório.**
 
@@ -119,6 +119,7 @@ Modo: final. Tarefa: <slug>. Repo: <raiz>. Perfil: <raiz>/.claude/perfil/impleme
 Branch: impl/<slug> @ <hash>. Base do diff: <principal>. Remote: <remote>. Áreas tocadas: <features/módulos visíveis, ou "nenhuma">.
 Saída: .impl/<slug>/qa/final.md. Retro: .impl/<slug>/retros/qa-final.md (relativos à sua worktree).
 Reteste: <"não" | ids dos achados corrigidos>.
+Conferir: <"—" | ids críticos ou altos da fase 4 consertados sem reteste>.
 ```
 
 Ele roda a suíte e os checks do perfil, revisa os commits de integração e as costuras entre faixas, e roda o QA visual ou e2e do perfil nas áreas tocadas (só quando o que o usuário vê mudou). Você confere em paralelo o que é barato: build do perfil sem warning novo, lint do perfil, `git status` sem fixture recebida nem lixo.

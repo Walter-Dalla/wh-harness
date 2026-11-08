@@ -28,7 +28,7 @@ O diff é `<base>...HEAD` (do prompt); leia por commit (id do item). Para cada i
 
 ## Modo `final` (a execução cara, uma vez por tarefa)
 1. **Testes:** suíte completa e checks do perfil § Testes e § Checks, com o serviço descartável na sua porta quando um check precisa dele (`${CLAUDE_PLUGIN_ROOT}/skills/implementation/AMBIENTE.md`), saída filtrada; pare o serviço. Teste só conta com exit e contagem lidos (`AMBIENTE.md` § Estados, evidência).
-2. **Integração:** os commits que não são de item (merges com conflito resolvido, `<slug>-fix`, `QA-…`) pelos quatro crivos do modo `codigo`; e as costuras entre faixas (contrato do produtor × leitura do consumidor, campos e códigos de erro).
+2. **Integração:** os commits que não são de item (merges com conflito resolvido, `<slug>-fix`, `QA-…`) pelos quatro crivos do modo `codigo`; e as costuras entre faixas (contrato do produtor × leitura do consumidor, campos e códigos de erro). Cada id do `Conferir:` do prompt, contra o achado original (`qa/<faixa|codigo>.md`, na pasta do plano), com o estado na saída como num reteste.
 3. **Visual/e2e** (se o prompt citar áreas tocadas e o perfil § QA visual ou e2e não for `—`): a skill ou o comando do perfil nas áreas do prompt (reteste: só os cenários dos ids do prompt). Copie o relatório dele para o arquivo de saída; prints e logs ficam na worktree (cite o caminho absoluto).
 
 Decisão do plano que parece errada: antes de registrá-la como "decisão contestada", pergunte ao enriquecedor que a tomou: `SendMessage(to: "main", message: "PERGUNTA qa-<faixa|final> <item>: <objeção>. Evidência: <arquivo:linha, regra>.")` e siga com o resto; a resposta chega na próxima chamada de ferramenta. Registre a objeção com a resposta dele.
