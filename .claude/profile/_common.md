@@ -14,6 +14,7 @@ Main branch: `main`. PR remote: `origin` (GitHub `Walter-Dalla/wh-harness`) [git
 
 ## Navigation
 `.codegraph/` at the root indexes the Python scripts (`plugins/wh/scripts/`, `plugins/wh/skills/*/scripts/`, `tests/`): `codegraph explore "<symbols or question>"`; `codegraph sync .` after editing [~/.claude/CLAUDE.md]. Skills, agents and docs are Markdown: `grep`/`Read` [owner].
+Agent and integration worktrees have no `.codegraph/` (gitignored): query the clone's index with `codegraph explore -p <root> "…"` (Python files equal at the base) [retro: enricher, scripts]
 
 ## Docs
 `CLAUDE.md` — map and rules (English only; skill = procedure, profile = facts; version bump on skill/hook change) [CLAUDE.md]

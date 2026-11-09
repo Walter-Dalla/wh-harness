@@ -43,4 +43,7 @@ Changelog: — . Version: `plugins/wh/.claude-plugin/plugin.json` `version` bump
 — [owner]
 
 ## Worktree commands
-— 
+Any Bash argument naming a path with `git` in it (e.g. `.gitignore`) is refused: read it with `Read` [retro: templates]
+`board.sh` text with `<`, `>` or `->` is refused: write the text without them [retro: wiring]
+No shell variables in paths (`W=…; sed $W/…`) and no `;`/`for` chains: one simple command per call [retro: wiring, qa-final]
+`git reset --hard <hash>` is refused by the auto-mode classifier: check `git log --oneline -1` first and reset only when HEAD differs [retro: qa-final]
