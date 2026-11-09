@@ -96,7 +96,7 @@ Reteste: <"não" | ids dos achados corrigidos>.
 
 `Agent(subagent_type: "wh:impl-qa", model: <perfil § Modelos; sem regra, "sonnet">, prompt: …)`, **sem `isolation`** (revisão estática: lê o diff no clone, sem reset nem índice novo) e sem `name`.
 
-Achados (tipo e severidade no arquivo do QA): **bug, padrão, nome ou teste ausente** = corrigir (um commit por achado, `QA-<faixa>-NN: …`), crítica e alta primeiro. Depois, **um** reteste por `impl-qa` só quando houve achado de código crítico, alto ou médio, cobrindo esses ids e os abertos na mesma área (um conserto pode mudar as condições do vizinho); conserto só de severidade baixa ou só de teste, você confere rodando o Aceite do item. O que volta vai para o relatório. **Risco não demonstrado, decisão contestada ou juízo de produto** = relatório, sem código; risco que o QA mediu ou reproduziu conta como bug. Saída ou retro que o QA devolveu na resposta (escrita recusada): grave-as você nos caminhos do prompt.
+Achados (tipo e severidade no arquivo do QA): **bug, padrão, nome ou teste ausente** = corrigir (um commit por achado, `QA-<faixa>-NN: …`), crítica e alta primeiro. Depois, **um** reteste por `impl-qa` só quando houve achado de código crítico, alto ou médio, cobrindo esses ids e os abertos na mesma área (um conserto pode mudar as condições do vizinho); conserto só de severidade baixa ou só de teste, você confere rodando o Aceite do item. O que volta vai para o relatório. Achado crítico ou alto consertado depois desse reteste ganha um reteste curto só do id, ou entra no `Conferir:` do prompt do QA final. **Risco não demonstrado, decisão contestada ou juízo de produto** = relatório, sem código; risco que o QA mediu ou reproduziu conta como bug. Saída ou retro que o QA devolveu na resposta (escrita recusada): grave-as você nos caminhos do prompt.
 
 **Feito quando todo achado está corrigido e retestado, ou registrado para o relatório.**
 
@@ -111,6 +111,7 @@ Branch: impl/<slug> @ <hash>. Base do diff: <principal>. Remote: <remote>. Área
 Saída: <raiz>/.impl/<slug>/qa/final.md. Retro: <raiz>/.impl/<slug>/retros/qa-final.md.
 Comandos: perfil § Comandos na worktree antes do 1º comando; git = <caminho absoluto da fase 1> -C <worktree> …, um comando por chamada.
 Reteste: <"não" | ids dos achados corrigidos>.
+Conferir: <"—" | ids críticos ou altos da fase 4 consertados sem reteste>.
 Crivos: <sim (tarefa pequena: os quatro crivos do modo codigo sobre todo o diff) | não>.
 ```
 

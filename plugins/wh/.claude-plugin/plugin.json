@@ -1,6 +1,6 @@
 {
   "name": "wh",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Generic implementation harness for Claude Code: skills, agents and deterministic hooks that read each project's facts from .claude/perfil/.",
   "author": { "name": "Walter Dalla" },
   "homepage": "https://github.com/Walter-Dalla/wh-harness",
