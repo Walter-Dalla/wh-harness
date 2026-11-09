@@ -155,6 +155,16 @@ class ChecarTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertTrue(any(it['item'] == 'context.json' and 'invalid JSON' in it['detalhe'] for it in itens))
 
+    def test_git_accepts_a_worktree_whose_dot_git_is_a_file(self):
+        worktree = os.path.join(self.tmp, 'worktree')
+        self.write(worktree, '.git', 'gitdir: /elsewhere/.git/worktrees/worktree\n')
+        code, pares, itens = run(worktree)
+        self.assertNotIn(('git', 'WARN'), pares)
+        bare = os.path.join(self.tmp, 'bare')
+        os.makedirs(bare)
+        code, pares, itens = run(bare)
+        self.assertIn(('git', 'WARN'), pares)
+
 
 if __name__ == '__main__':
     unittest.main()

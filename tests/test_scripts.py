@@ -277,7 +277,7 @@ class ScriptsTest(unittest.TestCase):
         self.assertEqual(env['PROFILE'], 'missing')
         self.assertEqual(env['INTWT'], os.path.join(os.path.realpath(self.repo), '.claude', 'worktrees', 'impl-demo'))
         self.assertEqual(git(env['INTWT'], 'branch', '--show-current'), 'impl/demo')
-        for sub in ('qa', 'retros', 'progress', 'acceptance'):
+        for sub in ('qa', 'retros', 'progress', 'acceptance', 'agent_chat'):
             self.assertTrue(os.path.isdir(os.path.join(self.repo, '.impl', 'demo', sub)), sub)
         self.assertTrue(os.path.isfile(env['BOARD']))
         with open(os.path.join(self.repo, '.git', 'info', 'exclude'), encoding='utf-8') as fh:
@@ -427,6 +427,91 @@ class ScriptsTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn('OUTSIDE: union/c.txt', out)
         self.assertNotIn('src/a.cs', out)
+
+    # ---- intake.sh
+
+    def test_intake_resolves_ids_paths_no_argument_and_next(self):
+        intake = os.path.join(SCRIPTS, 'intake.sh')
+
+        def facts(*args):
+            code, out = run(intake, self.tmp, self.repo, *args)
+            self.assertEqual(code, 0, out)
+            self.assertEqual(out.splitlines()[-1], 'INTAKE OK')
+            return dict(l.split('=', 1) for l in out.splitlines() if '=' in l)
+
+        self.write('.claude/profile/_common.md', '# Common\n\n## Pending\n`docs/pending/`\n\n## Limits\n`other/`\n')
+        self.write('docs/pending/P-001-alpha.md', '---\nid: P-001\nstatus: open\n---\n')
+        self.write('docs/pending/P-002-beta.md', '---\nid: P-002\nstatus: dropped\n---\n')
+        self.write('docs/pending/P-003-gamma.md', '---\nid: P-003\nstatus: open\n---\n')
+        pend = os.path.join(os.path.realpath(self.repo), 'docs', 'pending')
+        alpha, gamma = os.path.join(pend, 'P-001-alpha.md'), os.path.join(pend, 'P-003-gamma.md')
+
+        env = facts('P-001')
+        self.assertEqual((env['PENDING_DIR'], env['INTAKE'], env['PENDING'], env['SLUG']), (pend, 'file', alpha, 'alpha'))
+        env = facts('docs/pending/P-003-gamma.md', 'P-001')
+        self.assertEqual((env['INTAKE'], env['PENDING'], env['SLUG']), ('file', f'{alpha} {gamma}', 'pending-001-003'))
+        env = facts('P-001', 'fix', 'the', 'thing')
+        self.assertEqual((env['INTAKE'], env['PENDING'], env['SLUG']), ('raw', alpha, '—'))
+        env = facts('P-009', 'docs/pending/P-404.md')
+        self.assertEqual((env['INTAKE'], env['PENDING'], env['SLUG']), ('raw', '', '—'))
+        env = facts()
+        self.assertEqual((env['INTAKE'], env['PENDING'], env['SLUG']), ('file', f'{alpha} {gamma}', 'pending-001-003'))
+        self.assertEqual(run(intake, self.tmp, self.repo, 'next'), (0, 'P-004\n'))
+
+        empty = os.path.join(self.tmp, 'empty')
+        os.makedirs(empty)
+        self.assertEqual(run(intake, self.tmp, empty, 'next'), (0, 'P-001\n'))
+        self.assertTrue(os.path.isdir(os.path.join(empty, 'docs', 'pending')))
+        code, out = run(intake, self.tmp, empty)
+        self.assertEqual(code, 1, out)
+        self.assertIn('INTAKE FAILED: no open pending file', out)
+        code, out = run(intake, self.tmp)
+        self.assertEqual(code, 2, out)
+        self.assertIn('INTAKE FAILED: usage:', out)
+        code, out = run(intake, self.tmp, os.path.join(self.tmp, 'missing'))
+        self.assertEqual(code, 2, out)
+
+    # ---- agent_chat.sh
+
+    def test_agent_chat_creates_numbered_files_and_appends_answers(self):
+        chat_sh = os.path.join(SCRIPTS, 'agent_chat.sh')
+        impl = os.path.join(self.tmp, 'impl')
+        os.makedirs(impl)
+        code, out = run(chat_sh, self.tmp, impl, 'ask', 'f1', 'demo-1', 'f1', 'which field?')
+        self.assertEqual(code, 1, out)
+        self.assertIn('AGENT_CHAT FAILED:', out)
+        self.assertIn('does not exist (the orchestrator creates it in phase 1)', out)
+
+        chat = os.path.join(os.path.realpath(impl), 'agent_chat')
+        os.makedirs(chat)
+        code, out = run(chat_sh, self.tmp, impl, 'ask', 'f1', 'demo-1', 'f1', 'which', 'field?')
+        self.assertEqual((code, out), (0, os.path.join(chat, '01-f1-demo-1.md') + '\n'))
+        code, out = run(chat_sh, self.tmp, impl, 'ask', 'f2', 'demo-3', 'qa', 'is this a bug?')
+        self.assertEqual((code, out), (0, os.path.join(chat, '02-f2-demo-3.md') + '\n'))
+        first = os.path.join(chat, '01-f1-demo-1.md')
+        code, out = run(chat_sh, self.tmp, first, 'answer', 'enricher', 'other lanes: f2', 'use id, not name')
+        self.assertEqual((code, out), (0, first + '\n'))
+
+        date = r'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ'
+        with open(first, encoding='utf-8') as fh:
+            lines = fh.read().splitlines()
+        self.assertRegex(lines[0], rf'^# Chat 01 · f1 demo-1 · {date}$')
+        self.assertEqual(lines[1:5], ['', '## Question (f1)', '', 'which field?'])
+        self.assertEqual(lines[5], '')
+        self.assertRegex(lines[6], rf'^## Answer \(enricher\) · impact: other lanes: f2 · {date}$')
+        self.assertEqual(lines[7:], ['', 'use id, not name'])
+        self.assertRegex(lines[0].rsplit(' · ', 1)[1], r'^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$')
+        with open(os.path.join(chat, '02-f2-demo-3.md'), encoding='utf-8') as fh:
+            self.assertRegex(fh.read(), rf'^# Chat 02 · f2 demo-3 · {date}\n\n## Question \(qa\)\n\nis this a bug\?\n$')
+
+        code, out = run(chat_sh, self.tmp, os.path.join(chat, '09-x-y.md'), 'answer', 'enricher', 'item', 'ok')
+        self.assertEqual(code, 1, out)
+        self.assertIn('09-x-y.md does not exist', out)
+        for args in ((), (impl,), (impl, 'ask', 'f1', 'demo-1', 'f1'), (first, 'answer', 'enricher', 'item'),
+                     (impl, 'tell', 'f1', 'demo-1', 'f1', 'x')):
+            code, out = run(chat_sh, self.tmp, *args)
+            self.assertEqual(code, 2, args)
+            self.assertIn('AGENT_CHAT FAILED: usage: agent_chat.sh', out)
 
 
 if __name__ == '__main__':

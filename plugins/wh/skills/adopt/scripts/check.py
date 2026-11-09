@@ -186,7 +186,7 @@ class Check:
             self.add('WARN', 'codegraph', 'CLI absent: symbols come without file:line')
 
     def git(self):
-        if not os.path.isdir(self.p('.git')):
+        if not os.path.exists(self.p('.git')):  # a `git worktree` has a .git file, not a folder
             self.add('WARN', 'git', 'root is not a git repository (/wh:implementation worktrees need one)')
 
     def links(self):
