@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Adoption diagnosis of the `wh` harness in a repository: what exists, what is missing, what is off the template.
 
-Deterministic, stdlib only, never writes to the repo. One line per item: `OK | MISSING | WARN  <item>  <detail>`.
-Exits with 1 when there is any MISSING, 0 otherwise.
+Deterministic, stdlib only, never writes to the repo. One line per item: `OK | MISSING | OUTDATED | WARN  <item>  <detail>`.
+Exits with 1 when there is any MISSING or OUTDATED, 0 otherwise.
 
 Usage:
   check.py [--root DIR] [--plugin-root DIR] [--json]
@@ -23,6 +23,8 @@ CONTEXT_KEYS = {'glossario', 'features', 'indice_features', 'codegraph', 'class_
                 'max_termos', 'max_simbolos', 'max_interage', 'min_score', 'min_prompt', 'max_chars', 'idioma',
                 'secoes'}
 NO_PROFILE = {'profile', 'retro', 'adopt'}
+AGENTS_DIR = os.path.join('.claude', 'agents')
+TEMPLATE_MARK = re.compile(r'<!--\s*wh-template:\s*(\S+)\s+(\d+)\s*-->')
 
 
 def headings(text):
@@ -187,6 +189,54 @@ class Check:
         if not os.path.isdir(self.p('.git')):
             self.add('WARN', 'git', 'root is not a git repository (/wh:implementation worktrees need one)')
 
+    def links(self):
+        """Every path cited in backticks by the map, the profiles and context.json exists (adopt § 6.3)."""
+        files = [self.p(n) for n in ('CLAUDE.md', 'AGENTS.md')] + sorted(glob.glob(self.p(PROFILE_DIR, '*.md')))
+        bad = []
+        for path in files:
+            text = read(path)
+            if text is None:
+                continue
+            for tok in set(re.findall(r'`([^`\s]+)`', text)):
+                if not re.search(r'[/\\]|\.(md|json|ya?ml|toml|sh|py|cs|ts|js|csproj|sln)$', tok) or re.search(r'[<>*$§{}|…]|^https?:|^[-./]', tok):
+                    continue
+                if not os.path.exists(self.p(tok.rstrip('/'))):
+                    bad.append('%s → %s' % (os.path.relpath(path, self.root), tok))
+        cfg_path = self.p(PROFILE_DIR, 'context.json')
+        try:
+            cfg = json.loads(read(cfg_path) or '{}')
+        except ValueError:
+            cfg = {}
+        for key in ('glossario', 'features', 'indice_features'):
+            if key in cfg and not os.path.exists(self.p(cfg[key])):
+                bad.append('context.json → %s' % cfg[key])
+        if bad:
+            self.add('WARN', 'links', 'cited paths absent: ' + '; '.join(sorted(bad)))
+        elif any(os.path.isfile(f) for f in files):
+            self.add('OK', 'links', 'every cited path exists')
+
+    def agents(self):
+        """Native agents the project overrides from the plugin templates (`<!-- wh-template: <name> <n> -->`)."""
+        for tpl in sorted(glob.glob(os.path.join(self.plugin, 'skills', 'adopt', 'templates', 'agents', '*.md'))):
+            name = os.path.basename(tpl)
+            rel = os.path.join(AGENTS_DIR, name)
+            want = TEMPLATE_MARK.search(read(tpl) or '')
+            if not want:
+                self.add('WARN', 'agents', 'template %s has no wh-template marker' % name)
+                continue
+            text = read(self.p(rel))
+            if text is None:
+                self.add('MISSING', 'agents', '%s (template %s %s; /wh:adopt agents copies it)' % (rel, want.group(1), want.group(2)))
+                continue
+            have = TEMPLATE_MARK.search(text)
+            if not have:
+                self.add('WARN', 'agents', "%s is the owner's (no wh-template marker): not overwritten" % rel)
+            elif int(have.group(2)) < int(want.group(2)):
+                self.add('OUTDATED', 'agents', '%s is at %s %s, template at %s (/wh:adopt agents recopies it)' % (
+                    rel, have.group(1), have.group(2), want.group(2)))
+            else:
+                self.add('OK', 'agents', '%s (%s %s)' % (rel, have.group(1), have.group(2)))
+
     def run(self):
         self.git()
         self.repo_map()
@@ -196,6 +246,8 @@ class Check:
         self.settings()
         self.gitignore()
         self.codegraph()
+        self.links()
+        self.agents()
         return self.items
 
 
@@ -209,10 +261,10 @@ def main(argv):
         json.dump(items, sys.stdout, ensure_ascii=False, indent=1)
     else:
         for it in items:
-            print('%-7s  %-22s %s' % (it['estado'], it['item'], it['detalhe']))
-        n = sum(1 for it in items if it['estado'] == 'MISSING')
-        print('%d MISSING, %d WARN' % (n, sum(1 for it in items if it['estado'] == 'WARN')))
-    return 1 if any(it['estado'] == 'MISSING' for it in items) else 0
+            print('%-8s  %-22s %s' % (it['estado'], it['item'], it['detalhe']))
+        count = lambda state: sum(1 for it in items if it['estado'] == state)  # noqa: E731
+        print('%d MISSING, %d OUTDATED, %d WARN' % (count('MISSING'), count('OUTDATED'), count('WARN')))
+    return 1 if any(it['estado'] in ('MISSING', 'OUTDATED') for it in items) else 0
 
 
 if __name__ == '__main__':
