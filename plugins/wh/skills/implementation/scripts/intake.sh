@@ -42,7 +42,7 @@ if [ $# -eq 1 ] && [ "$1" = --next ]; then
 fi
 
 found=()
-intake=file
+intake='file'
 if [ $# -eq 0 ]; then
   for f in "$dir"/P-*.md; do
     [ -f "$f" ] || continue
