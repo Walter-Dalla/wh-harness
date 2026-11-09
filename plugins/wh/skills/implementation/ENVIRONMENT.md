@@ -17,8 +17,13 @@ Only if profile § Disposable service exists. From the port range of `_common` �
 
 | Script | Who runs it | Does |
 |---|---|---|
+| `impl_env.sh <slug> [--main <b>] [--remote <r>]` | orchestrator, phase 1, once | checks root, main branch, clean status, remote, `pull --ff-only`; exclude lines, `.impl/<slug>/` folders and board, PR mode, CodeGraph sync, integration worktree; prints the task's `KEY=VALUE` facts; `ENV FAILED` = stop |
+| `board.sh <board> <who> <KIND> <text…>` | every agent, for every board line | appends `<date> | <who> | <KIND> | <text>` with a fresh UTC timestamp; one simple command (passes the worktree guard) |
+| `acceptance.py <lane.md or PLAN.md> <worktree> [--only <ids>] [--log <dir> --lane <l>]` | enricher (Acceptance at the tip, `WAVE`), `impl-dev` (per item, with `--log`) | runs each item's `Acceptance:` command in the worktree, prints `<id> · exit <n>`, writes `<dir>/<lane>-<id>.log` |
 | `preflight.sh --base <hash> [--branch <b>] [--port <p>] [--lane <lane.md>] [--protected <a,b>]` | `impl-dev` and `impl-qa`, before any `git reset`/`branch` | checks agent worktree, branch, clean worktree, existing base, free port, lane and board; `PREFLIGHT FAILED` = `BLOCKED`, touching nothing |
 | `scope.sh <lane.md> <base> [<ref>]` | `impl-dev` at the end, orchestrator before the merge | changed files × `Owns:`/`May touch`/`Union:` of the lane (paths in backticks); `OUTSIDE:` = the lane fixes it before the merge |
+| `merge_lane.sh <integration worktree> <slug> <lane> <remote> [<main>]` | orchestrator only, at each lane merge | refuses a worktree not on `impl/<slug>` (`MERGE REFUSED`, exit 1); fetches and merges `<remote>/impl/<slug>-<lane>` with `--no-ff` (`MERGED`); `MERGE CONFLICT` exit 3 leaves the merge in progress; `MAIN MOVED: <n> commit(s)` when `<remote>/<main>` advanced since the base |
+| `cleanup_worktrees.sh <root> <slug> [--main <b>] [--integration] [--dry-run]` | orchestrator, phase 6; `/wh:cleanup` § 6 | removes the run's worktrees (`impl/<slug>-*`, `worktree-agent-*` on a commit of `<main>..impl/<slug>`), saving changes as `wip: <branch>`; `--integration` also removes `impl/<slug>`'s; everything else `KEPT` |
 
 ## Tools (each only if installed; present, mandatory from the first step)
 
@@ -69,7 +74,9 @@ Fixes requested: <QA-… ids received and not committed, with the QA file, or "n
 
 ## Files outside the worktree
 
-Retro, checkpoint, QA output and Acceptance log go to the absolute paths from the prompt, in `<root>/.impl/<slug>/` (the folders `qa/`, `retros/`, `progress/` and `acceptance/` already exist: the orchestrator creates them in phase 1). In an agent worktree the isolation guard refuses `Write`/`Edit` on those paths (seen in Claude Code 2.1.312): write through Bash, `cat > <absolute path> <<'EOF'` … `EOF`, one simple call per file, never `Write`/`Edit` outside the worktree. In the clone (enricher, QA mode `code`) `Write` works. Heredoc also refused: the content goes in your final answer, marked with the destination path, and the orchestrator writes it. The board accepts `printf … >> <board>`.
+Retro, checkpoint, QA output and Acceptance log go to the absolute paths from the prompt, in `<root>/.impl/<slug>/` (the folders `qa/`, `retros/`, `progress/` and `acceptance/` already exist: the orchestrator creates them in phase 1). In an agent worktree the isolation guard refuses `Write`/`Edit` on those paths (seen in Claude Code 2.1.312): write through Bash, `cat > <absolute path> <<'EOF'` … `EOF`, one simple call per file, never `Write`/`Edit` outside the worktree. In the clone (enricher, QA mode `code`) `Write` works. Heredoc also refused: the content goes in your final answer, marked with the destination path, and the orchestrator writes it. The board is written only through `board.sh` (§ Scripts).
+
+The rule in one line: a file **inside** the worktree = `Write`/`Edit`, never a heredoc (the guard refused heredocs inside the worktree inconsistently in 5 lanes of a 2026-11-09 run, Claude Code 2.1.319); a file **outside** it = heredoc through Bash, never `Write`/`Edit`.
 
 ## Bash in the agent worktree
 
@@ -80,11 +87,11 @@ The same guard refuses the command it cannot verify ("too complex to verify"). R
 - a heredoc or program assembled on the fly for an interpreter (`python3 - <<'EOF'`, `python3 -c "$var"`), and a test with a computed operand;
 - a loop (`for`, `while`), a long script in a single call, `cd` outside the worktree.
 
-One simple command per call; `git -C <worktree> reset --hard <hash>` in its own call; a value from another command (date, hash) = run it first and paste the literal result; a script of more than one line = a file inside the worktree, outside the commit, run by name. A command that only passes outside the worktree (Acceptance marked "clone only" in the lane): do not insist; a `WARNING` line on the board and the orchestrator runs it (`LANES.md` §3, step 1). Whatever else the guard refuses in this repo: profile § Worktree commands.
+One simple command per call; `git -C <worktree> reset --hard <hash>` in its own call; a value from another command (date, hash) = run it first and paste the literal result; a script of more than one line = a file inside the worktree written with `Write`, outside the commit, run by name. A heredoc (`cat > file <<'EOF'`) only for a path outside the worktree (§ Files outside the worktree); inside it, `Write`/`Edit`. A command that only passes outside the worktree (Acceptance marked "clone only" in the lane): do not insist; a `WARNING` line on the board and the orchestrator runs it (`LANES.md` §3, step 1). Whatever else the guard refuses in this repo: profile § Worktree commands.
 
 ## Disposable service
 
-The command of profile § Disposable service with your port and a disposable state (`<slug>-<port>` in the database or folder name), at the worktree root, in the background (`run_in_background`); ready when the profile's health check responds. Stop it at the end (`kill <pid>` of the process you started). Never the owner's data state.
+The command of profile § Disposable service with your port and a disposable state (`<slug>-<port>` in the database or folder name), at the worktree root, in the background (`run_in_background`); ready when the profile's health check responds. Stop it at the end (`kill <pid>` of the process you started). After the `kill`, the background task ends with exit 137 (SIGKILL) and the notification says it failed: that is the normal end of a service you stopped, not a finding and not a red verdict; only an exit before your `kill` counts as a crash. Never the owner's data state.
 
 ## Tests and checks
 

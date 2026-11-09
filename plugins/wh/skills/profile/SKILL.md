@@ -16,7 +16,7 @@ A **profile** is what a generic skill needs to know about the repository and can
 
 ## 1. Difference
 
-Read the template and the current file (if it exists). The difference is the list of `##` sections of the template missing from the file. An extra section in the file stays (repo knowledge). Complete file = say so and stop.
+`python3 -I "${CLAUDE_PLUGIN_ROOT}/skills/adopt/scripts/check.py" --root .` already computes it: the line `profile <skill>` says `MISSING <path>` (no file), `MISSING … missing sections: <list>` or `OK`, and the `WARN` lines say what is too long, `[inferred]` or `—`. Read that output instead of comparing the template and the file by hand; open the template only for the sections you will write. An extra section in the file stays (repo knowledge). Complete file = say so and stop.
 
 **Done when every template section is classified: present or missing.**
 

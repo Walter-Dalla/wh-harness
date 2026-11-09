@@ -46,10 +46,9 @@ For each affected `.md` from step 1: old name replaced by the new, the deleted o
 
 ## 6. Worktrees
 
-Only the worktrees **of the run** (`git worktree list --porcelain`): with `slug`, those on branch `impl/<slug>-*` and the agent ones (`worktree-agent-*`) whose HEAD is a commit of `<main>..impl/<slug>` (the `worktree-agent-*` branch goes with it: `git branch -D`); without it, those whose branch is already merged into `HEAD` (`git branch --merged HEAD`). Any other (owner, another session) stays as is and is listed in the answer. For each one:
+With `slug`: `${CLAUDE_PLUGIN_ROOT}/skills/implementation/scripts/cleanup_worktrees.sh <root> <slug> --main <main>` (first with `--dry-run`, to list; then for real). It removes only the worktrees **of the run**: branch `impl/<slug>-*`, and `worktree-agent-*` whose HEAD is a commit of `<main>..impl/<slug>` (that branch goes with it, `git branch -D`); an uncommitted change becomes a commit `wip: <branch>` on the worktree's branch first (detached HEAD: branch `wt/<folder>`); locked worktrees are unlocked; `git worktree prune` at the end. Every other worktree (owner, another session) is printed as `KEPT` and goes in the answer. `--integration` also removes the `impl/<slug>` worktree: only when the branch is already pushed. The `impl/…` branches stay.
 
-- **Uncommitted change** (`git -C <wt> status --porcelain` with output): `git -C <wt> add -A`. Content already saved when `git -C <wt> diff --cached --quiet <ref> -- <files from status>` passes against `<main>` or `origin/<branch>`; then the worktree goes straight to removal. Otherwise, commit on the worktree's branch in the format of profile § Commit (detached HEAD: `git -C <wt> switch -c wt/<folder>` first).
-- **Removal:** `git worktree remove <wt>`; `--force` only for a change already saved in `<main>` or `origin/<branch>`; locked, `git worktree unlock <wt>` first. The `impl/…` branch stays. At the end, `git worktree prune`.
+Without `slug`: by hand, the worktrees whose branch is already merged into `HEAD` (`git branch --merged HEAD`), each with the same steps: `git -C <wt> status --porcelain` with output = `git -C <wt> add -A` and a commit in the format of profile § Commit; `git worktree remove <wt>` (`--force` only for a change already saved in `<main>` or `origin/<branch>`); `git worktree prune`.
 
 **Done when no worktree of the run remains in `git worktree list`, and every change of the removed ones is in a commit, in `<main>` or in `origin/<branch>`.**
 

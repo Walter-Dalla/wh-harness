@@ -21,7 +21,7 @@ Layout of `qa/`: report, screenshots (`qa/screenshots/<feature>/<scenario>-<WxH>
 Docs that define "correct" (layer rules, feature map, status, known open items), numbers (`Balance`, catalogs).
 
 ## Checklist
-Doc with what to verify per feature, how to read the screenshots and what is not a bug (`deploy/qa/CHECKLIST.md`).
+Doc with what to verify per feature, how to read the screenshots and what is not a bug (`deploy/qa/CHECKLIST.md`). Narrowest supported width (e.g. `320` px) and how to read overflow there: the check is `scrollWidth <= clientWidth` on the page or panel root, run once per language of § Input (a layout overflow at 320 px passed 5 lanes and the code QAs in a 2026-11-09 run).
 
 ## Fixtures
 How to build the starting state (fixture script, `PUT`s, level/balance tool through the local admin), new-user state, what requires a resource with no UI path.

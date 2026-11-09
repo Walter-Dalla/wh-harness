@@ -1,20 +1,20 @@
 ---
 name: adopt
-description: Turns the wh harness on in a repository that does not have it yet: diagnoses what is missing, creates CLAUDE.md, profiles, glossary, feature map, context.json and settings.json, and validates. Use for "adopt the harness", "prepare the project for wh", or /wh:adopt.
+description: Turns the wh harness on in a repository that does not have it yet: diagnoses what is missing, creates CLAUDE.md, profiles, glossary, feature map, context.json, settings.json and the project's Explore and Plan agents, and validates. Use for "adopt the harness", "prepare the project for wh", or /wh:adopt.
 ---
 
 # Adopt the harness
 
 You are at the root of a repository that wants to use the `wh` plugin. The plugin already has the procedures; this repo does not yet have the **facts** (`.claude/profile/`), the hook's **sources** (glossary, feature map) or the plugin **declaration**. This skill creates what is missing and validates. Nothing of the project enters the plugin: everything you write stays in the repo.
 
-Argument: none (everything) or a list of what to do: `check` (diagnosis only), `profiles`, `sources` (glossary + feature map), `hook` (`context.json`), `plugin` (`settings.json` + `.gitignore`). E.g. `/wh:adopt check`, `/wh:adopt profiles hook`.
+Argument: none (everything) or a list of what to do: `check` (diagnosis only), `profiles`, `sources` (glossary + feature map), `hook` (`context.json`), `plugin` (`settings.json` + `.gitignore`), `agents` (the project's `Explore` and `Plan` agents). E.g. `/wh:adopt check`, `/wh:adopt profiles hook`, `/wh:adopt agents`.
 
 Diagnosis (injected; runs before you read this):
 !`python3 -I "${CLAUDE_PLUGIN_ROOT}/skills/adopt/scripts/check.py" --root . 2>&1 || true`
 
 ## 1. Diagnose
 
-Read the diagnosis above. `MISSING` = this skill creates it; `WARN` = the owner's or another skill's decision (said in the detail); `OK` = do not touch. With `check`: present the diagnosis with one line of what each `MISSING` would require and stop.
+Read the diagnosis above. `MISSING` = this skill creates it; `OUTDATED` = this skill recopies it (agent templates, § 5); `WARN` = the owner's or another skill's decision (said in the detail); `OK` = do not touch. With `check`: present the diagnosis with one line of what each `MISSING` or `OUTDATED` would require and stop.
 
 Confirm the root: `git rev-parse --show-toplevel` equals the cwd. Monorepo: adoption is per git root, not per package; `context.json` is looked up walking up the tree from the session's cwd.
 
@@ -44,23 +44,24 @@ Only when the repo has a domain for it (entities, services, screens with busines
 
 **Done when the glossary and the index parse: `python3 -I "${CLAUDE_PLUGIN_ROOT}/scripts/prompt_graph.py" --build --root .` shows terms and features > 0 (needs the `context.json` of § 5).**
 
-## 5. `context.json`, `settings.json`, `.gitignore`
+## 5. `context.json`, `settings.json`, `.gitignore`, agents
 
 - `MISSING context.json`: write `.claude/profile/context.json` with only the keys whose value differs from the default (`glossario`, `features`, `indice_features`, `codegraph`, `idioma`; defaults and the other keys in `DEFAULTS` of `${CLAUDE_PLUGIN_ROOT}/scripts/prompt_graph.py`). No glossary nor features (skipped § 4): do not create the file and say "hook off: no sources".
 - `MISSING settings.json`: create or complete `.claude/settings.json` (merge: never delete existing keys) with `extraKnownMarketplaces.wh-harness` (`source: github`, `repo: Walter-Dalla/wh-harness`) and `enabledPlugins."wh@wh-harness": true`. Pin a version (`"ref": "<tag>"`) only if the owner asked.
 - `.gitignore`: add `.codegraph/` if it is not there. `.impl/` goes in `.git/info/exclude` (`/wh:implementation` does it); do not put it in `.gitignore`.
 - `WARN codegraph` with the CLI present and the index missing: **do not run** `codegraph init`; indexing is the owner's decision. It enters the report as an open item with the command.
+- **Agents** (`MISSING agents` or `OUTDATED agents`): copy `${CLAUDE_PLUGIN_ROOT}/skills/adopt/templates/agents/Explore.md` and `Plan.md` to `.claude/agents/`, byte for byte (`cp`). A project agent with the same name wins over Claude Code's native `Explore` and `Plan` (seen in 2.1.319), so the main session's exploration and planning subagents follow the repo's rules: CodeGraph, glossary and feature map read from `.claude/profile/`, certainty marks, impact radius. The template has no project fact; the copy reads `_common § Navigation` and `_common § Docs` at run time. The `<!-- wh-template: <name> <n> -->` marker in the body is what the diagnosis compares: it rises only when the template changes. `WARN agents` (the file exists without a marker) is the owner's: do not overwrite; say so in the report. A plugin agent (`plugins/wh/agents/`) gets the `wh:` namespace and does not replace a native one; that is why the copy lives in the project.
 
-**Done when the three files exist and `python3 -m json.tool` accepts both JSON files.**
+**Done when the three files exist, `python3 -m json.tool` accepts both JSON files, and the diagnosis reports `OK agents` for both templates (or `WARN agents`, the owner's).**
 
 ## 6. Validate
 
-1. Run `python3 -I "${CLAUDE_PLUGIN_ROOT}/skills/adopt/scripts/check.py" --root .` again: zero `MISSING` (apart from the ones the owner decided to leave, said in the report).
+1. Run `python3 -I "${CLAUDE_PLUGIN_ROOT}/skills/adopt/scripts/check.py" --root .` again: zero `MISSING` and zero `OUTDATED` (apart from the ones the owner decided to leave, said in the report).
 2. Hook: `python3 -I "${CLAUDE_PLUGIN_ROOT}/scripts/prompt_graph.py" --query "<sentence with 2 glossary terms>" --root . --explain`: the right feature appears under "Read". It does not: add the word to the index line or to the `aliases`.
-3. Every path cited in `CLAUDE.md`, in the profiles (`_common § Docs`) and in `context.json` exists (`ls`).
+3. Every path cited in `CLAUDE.md`, in the profiles (`_common § Docs`) and in `context.json` exists: the `links` line of the diagnosis of step 1 is `OK` (a `WARN links` lists each absent path: fix the citation or create the file).
 
 **Done when the three pass.**
 
 ## 7. Report
 
-In order: files created and changed (one per line); what stayed `WARN` and who resolves it (owner: `codegraph init -y .`, `[inferred]` lines, optional profiles; another skill: `/wh:feature-docs` to fatten the map); what was skipped and why; and the two final steps only the owner does: commit `.claude/profile/`, `.claude/settings.json`, `CLAUDE.md`, `docs/` and open a new session (hooks and plugins load at session start). Commit only if the owner asks.
+In order: files created and changed (one per line); what stayed `WARN` and who resolves it (owner: `codegraph init -y .`, `[inferred]` lines, optional profiles; another skill: `/wh:feature-docs` to fatten the map); what was skipped and why; and the two final steps only the owner does: commit `.claude/profile/`, `.claude/agents/`, `.claude/settings.json`, `CLAUDE.md`, `docs/` and open a new session (hooks, plugins and agents load at session start: the copied `Explore` and `Plan` only take effect in the next one). Commit only if the owner asks.
