@@ -277,7 +277,7 @@ class ScriptsTest(unittest.TestCase):
         self.assertEqual(env['PROFILE'], 'missing')
         self.assertEqual(env['INTWT'], os.path.join(os.path.realpath(self.repo), '.claude', 'worktrees', 'impl-demo'))
         self.assertEqual(git(env['INTWT'], 'branch', '--show-current'), 'impl/demo')
-        for sub in ('qa', 'retros', 'progress', 'acceptance'):
+        for sub in ('qa', 'retros', 'progress', 'acceptance', 'agent_chat'):
             self.assertTrue(os.path.isdir(os.path.join(self.repo, '.impl', 'demo', sub)), sub)
         self.assertTrue(os.path.isfile(env['BOARD']))
         with open(os.path.join(self.repo, '.git', 'info', 'exclude'), encoding='utf-8') as fh:
