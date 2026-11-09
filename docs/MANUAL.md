@@ -19,15 +19,16 @@ The rule that holds the two halves together: **the skill has the procedure, the 
 | Common profile template | `plugins/wh/skills/profile/COMMON.md` | sections every skill uses |
 | Profile generator | `plugins/wh/skills/profile/SKILL.md` (`/wh:profile <skill>`) | writes or completes the profiles from the templates and the repo |
 | Adoption | `plugins/wh/skills/adopt/SKILL.md` (`/wh:adopt`) + `scripts/check.py` + `templates/agents/` | diagnoses a new repo and creates what is missing (§4); the script is the deterministic diagnosis; the templates are the project's `Explore` and `Plan` agents |
-| `/wh:implementation` support | `plugins/wh/skills/implementation/TRIAGE.md`, `LANES.md`, `ENVIRONMENT.md`, `REPORT.md`, `scripts/` | triage and plan format; parallel lanes; agent environment and protocol; retros and report; `impl_env.sh` (phase 1), `board.sh`, `acceptance.py`, `preflight.sh`, `scope.sh`, `merge_lane.sh`, `cleanup_worktrees.sh` |
+| `/wh:implementation` support | `plugins/wh/skills/implementation/TRIAGE.md`, `LANES.md`, `ENVIRONMENT.md`, `REPORT.md`, `PENDING.md`, `scripts/` | triage and plan format; parallel lanes; agent environment and protocol; retros and report; pending file format; `intake.sh` and `impl_env.sh` (phase 1), `board.sh`, `agent_chat.sh`, `acceptance.py`, `preflight.sh`, `scope.sh`, `merge_lane.sh`, `cleanup_worktrees.sh` |
 | Manifests | `plugins/wh/.claude-plugin/plugin.json` and `icon.png`, `plugins/wh/README.md`, `.claude-plugin/marketplace.json` | what the plugin directory reads; `claude plugin validate --strict` on both (§6) |
-| Agents | `plugins/wh/agents/impl-enrich.md`, `impl-dev.md`, `impl-qa.md` | subagents of `/wh:implementation` (`subagent_type: "wh:impl-dev"`…) |
+| Agents | `plugins/wh/agents/impl-structure.md`, `impl-enrich.md`, `impl-dev.md`, `impl-qa.md` | subagents of `/wh:implementation` (`subagent_type: "wh:impl-dev"`…) |
 | Project agents | `<repo>/.claude/agents/Explore.md`, `Plan.md` (copied by `/wh:adopt agents` from `plugins/wh/skills/adopt/templates/agents/`) | override Claude Code's native `Explore` and `Plan` with versions that follow the repo's rules (§4, step 8) |
 | Hooks | `plugins/wh/hooks/hooks.json`, `plugins/wh/scripts/` | deterministic hooks; today `prompt-graph` (only runs with `context.json` in the cwd or above) |
 | Project common profile | `<repo>/.claude/profile/_common.md` | clone, toolchain, git, ports, navigation, docs, limits |
 | Per-skill profile | `<repo>/.claude/profile/<skill>.md` | only what that skill uses; cites `_common § X` instead of repeating |
 | Hook sources | `<repo>/.claude/profile/context.json` | turns `prompt-graph` on in the project and says where glossary, features and CodeGraph are |
 | Plugin declaration in the project | `<repo>/.claude/settings.json` | makes whoever clones the project receive the plugin (§4) |
+| Pending folder | `<repo>/<_common § Pending>` (default `docs/pending/`) | owner's open items, one file per item; intake of `/wh:implementation` and home of what a run leaves open (§5.4) |
 | Graph cache | `~/.cache/walter-harness/<hash of the repo path>.json` (or `$WH_CACHE_DIR`) | generated; never version it |
 
 ---
@@ -163,7 +164,9 @@ Two ways to have the plugin:
   claude plugin update wh@wh-harness             # after each edit in the harness
   ```
 
-**Session model for `/wh:implementation`.** The profile § Models chooses the subagents' model (no rule: `impl-enrich` on `fable` with `effort: medium` fixed in its frontmatter, the `code` QA on `sonnet`, the rest on `opus`); the orchestrator runs on the session's model, and it pays most of the bill (72–77% of the cost in the two runs of the 2026-10-28 test drive, with the session on the most expensive model). For harness tasks, open the session with `claude --model opus`.
+**Session model for `/wh:implementation`.** The profile § Models chooses the subagents' model (no rule: `impl-enrich` on `fable` with `effort: medium` fixed in its frontmatter, the `code` QA on `sonnet`, the rest, structurer included, on `opus`); the orchestrator runs on the session's model, and it pays most of the bill (72–77% of the cost in the two runs of the 2026-10-28 test drive, with the session on the most expensive model). For harness tasks, open the session with `claude --model opus`.
+
+**Two intakes.** `/wh:implementation <free text>`: raw request; the `impl-structure` subagent turns it into pending files, then the enricher reads them. `/wh:implementation P-001 [P-003 | docs/pending/P-00x.md]`: straight to the enricher, with those files. `/wh:implementation` alone: every `status: open` file of the pending folder. `intake.sh` decides the mode and the slug in phase 1.
 
 In a new project, the short path is `/wh:adopt` at the root: it runs the diagnosis (`plugins/wh/skills/adopt/scripts/check.py --root .`, one `OK`/`MISSING`/`WARN` line per piece), calls `/wh:profile`, seeds the glossary and the feature map when the repo has a domain, writes `context.json`, `settings.json` and `.gitignore`, copies the project's `Explore` and `Plan` agents, and validates with `--build` and a `--query` (§6). `/wh:adopt check` only diagnoses. What it does not do: `codegraph init` (the owner's decision), commit, and fattening the feature map (`/wh:feature-docs`). The steps below are the same path, by hand:
 
@@ -283,6 +286,43 @@ Sections read: `aliases` frontmatter, `# Title`, `## Entry symbols` (only identi
 
 The key names and the `pt` default are kept for compatibility with projects configured before 0.7.0.
 
+### 5.4 Pending file
+
+One file per open item of the owner, `P-NNN-<slug>.md`, in the folder of `_common § Pending` (default `docs/pending/`). Format (`plugins/wh/skills/implementation/PENDING.md`):
+
+```markdown
+---
+id: P-NNN
+status: open | in progress | dropped
+created: YYYY-MM-DD
+related: [P-NNN, …]
+---
+
+# <Title: what changes, in one line>
+
+## Problem
+What is missing or wrong today, and how it shows up. Owner's words when they exist.
+
+## Strategy
+The proposed direction, as numbered steps. Alternatives considered and why they lost, when there are any.
+
+## Locations
+Where the change happens, one line per place, each with its role in the change:
+- `path:line` (§ Section) — what changes there
+
+## Code references
+Symbols the change touches or depends on, resolved by CodeGraph (`codegraph explore`) or the prompt-graph hook:
+- `Symbol` `path:line` — role
+
+## Other references
+Docs, test-drive reports, runs, decisions that explain the item.
+
+## Open questions
+What the owner still decides, one `- <question>` per line; an answered one stays, as `- <question> → <answer> (owner, <date>)`. `—` when nothing.
+```
+
+The script (`intake.sh`) reads only the filename and `status:`; the content is for the models.
+
 ---
 
 ## 6. Validation and debugging
@@ -320,6 +360,8 @@ echo '{"prompt":"the counter does not receive portions","cwd":"'$PWD'"}' | pytho
 
 **`/wh:implementation` in headless mode** (`claude -p "/wh:implementation …" --output-format stream-json`): the session has no `AskUserQuestion`, so the orchestrator adopts the recommended option of each question and lists the "Decisions taken without the owner" in the report. The stream carries more than one `result` object (the orchestrator ends its turn while the subagents run in the background and is resumed on each notification): the task result is the **last** `result`.
 
+The structurer does not ask in headless mode either: its questions stay under `## Open questions` of the pending files, for the enricher and the owner.
+
 To turn off in one session only: `WH_PROMPT_GRAPH=0 claude`. To turn off in the project: remove `context.json`. To turn off everywhere: `claude plugin disable wh@wh-harness`. CodeGraph is opened read-only (`mode=ro`); with the index being written at the same time, the query waits up to 1 s and goes on without symbols.
 
 ---
@@ -342,7 +384,7 @@ To turn off in one session only: `WH_PROMPT_GRAPH=0 claude`. To turn off in the 
 
 **New shell script:** `bash -n` and `shellcheck -S warning` run in CI; a test in `tests/test_scripts.py` builds a temporary repo and exercises the script.
 
-**What is a script and what is the model.** Everything deterministic that an agent used to do in Bash turns is a script in `skills/implementation/scripts/` or `skills/adopt/scripts/`: environment checks and folders (`impl_env.sh`), board lines with a timestamp (`board.sh`), running Acceptance commands (`acceptance.py`), scope and preflight, merges (`merge_lane.sh`), worktree cleanup (`cleanup_worktrees.sh`), adoption diagnosis and cited-path check (`check.py`). The model keeps analysis, plan, QA gates, retros, conflict resolution and owner decisions. A new step that is pure git, filesystem or parsing goes to a script first, with a test, and the skill cites the script; the orchestrator pays most of the bill, so its Bash turns are the first to move.
+**What is a script and what is the model.** Everything deterministic that an agent used to do in Bash turns is a script in `skills/implementation/scripts/` or `skills/adopt/scripts/`: environment checks and folders (`impl_env.sh`), board lines with a timestamp (`board.sh`), running Acceptance commands (`acceptance.py`), scope and preflight, merges (`merge_lane.sh`), worktree cleanup (`cleanup_worktrees.sh`), intake mode, slug and next pending id (`intake.sh`), consultation files (`agent_chat.sh`), adoption diagnosis and cited-path check (`check.py`). The model keeps analysis, plan, QA gates, retros, conflict resolution and owner decisions. A new step that is pure git, filesystem or parsing goes to a script first, with a test, and the skill cites the script; the orchestrator pays most of the bill, so its Bash turns are the first to move.
 
 **New agent:** `plugins/wh/agents/<name>.md`; the caller uses `subagent_type: "wh:<name>"` and passes `PLUGIN_ROOT` in the prompt.
 
@@ -364,6 +406,6 @@ To turn off in one session only: `WH_PROMPT_GRAPH=0 claude`. To turn off in the 
 - **Project agents load at session start.** The `Explore.md` and `Plan.md` copied by `/wh:adopt agents` only take effect in the next session. Still to verify (2026-11-09): that `.claude/agents/Plan.md` wins over the native `Plan` as `Explore` does; that an MCP tool listed in `tools` (`mcp__codegraph__codegraph_explore`) reaches the subagent (the template falls back to the `codegraph explore -p .` CLI); that `effort` in an agent's frontmatter is honored.
 - **Integration only in its own worktree.** Since 0.7.2 the orchestrator never switches the clone's checkout: `impl/<slug>` lives in `.claude/worktrees/impl-<slug>` and `merge_lane.sh` refuses to merge anywhere else; it also reports `MAIN MOVED` when the main branch advanced on the remote, which phase 5 merges before the final QA (a 2026-11-09 run merged on the local main and only saw two landed PRs at a late `git fetch`).
 - **PR only with GitHub.** Without an authenticated `gh` or with a remote that is not GitHub, `/wh:implementation` enters no-PR mode in phase 1: it delivers the branch on the remote and the merge command.
-- **`.impl/<slug>/` disappears at cleanup.** The task's trail is the report. To debug the harness itself, copy the folder before phase 6 (e.g. a project `PostToolUse` hook that mirrors it, as in the test drive).
+- **`.impl/<slug>/` disappears at cleanup.** The trail is the report, which since 0.8.0 lists every consultation (`agent_chat/`) and points open items at pending files. To debug the harness itself, copy the folder before phase 6 (e.g. a project `PostToolUse` hook that mirrors it, as in the test drive).
 - **The plural stem is PT-BR.** In English (`idioma: en`) it cuts the final `s` of any word (`status` → `statu`, `process` → `proces`); since prompt and keys go through the same stem, matching works, but irregular English plurals do not match.
 - **Undocumented Claude Code dependencies (to verify on each version):** `preflight.sh` expects the `worktree-agent-*` branch that `isolation: "worktree"` creates (`WH_AGENT_BRANCH_PREFIX` changes the prefix); the orchestrator expects the worktree path in the `Agent` result (fallback: `git worktree list --porcelain`); the answer to a `SendMessage` reaches the agent on its next tool call; a `SendMessage` to an agent that already finished resumes it with its context (that is how the enricher and the QA fixes work); agent worktrees are born in `<repo>/.claude/worktrees/` (phase 1 puts them in the exclude).

@@ -17,8 +17,10 @@ Only if profile § Disposable service exists. From the port range of `_common` �
 
 | Script | Who runs it | Does |
 |---|---|---|
-| `impl_env.sh <slug> [--main <b>] [--remote <r>]` | orchestrator, phase 1, once | checks root, main branch, clean status, remote, `pull --ff-only`; exclude lines, `.impl/<slug>/` folders and board, PR mode, CodeGraph sync, integration worktree; prints the task's `KEY=VALUE` facts; `ENV FAILED` = stop |
+| `intake.sh <root> [<arg>…] \| next` | orchestrator, phase 1 (intake) and close (id of a new pending file) | reads the folder of `_common § Pending`; prints `PENDING_DIR=`, `INTAKE=file\|raw`, `PENDING=`, `SLUG=`, `INTAKE OK`; `next` prints only the next free `P-NNN`; `INTAKE FAILED` = stop |
+| `impl_env.sh <slug> [--main <b>] [--remote <r>]` | orchestrator, phase 1, once | checks root, main branch, clean status, remote, `pull --ff-only`; exclude lines, `.impl/<slug>/` folders (`qa/`, `retros/`, `progress/`, `acceptance/`, `agent_chat/`) and board, PR mode, CodeGraph sync, integration worktree; prints the task's `KEY=VALUE` facts; `ENV FAILED` = stop |
 | `board.sh <board> <who> <KIND> <text…>` | every agent, for every board line | appends `<date> | <who> | <KIND> | <text>` with a fresh UTC timestamp; one simple command (passes the worktree guard) |
+| `agent_chat.sh <impl> ask <lane> <item> <who> <text…> \| <file> answer <who> <impact> <text…>` | orchestrator when relaying a consultation; enricher (or orchestrator) when answering | `ask` creates `<impl>/agent_chat/NN-<lane>-<item>.md` (`## Question (<who>)`), `answer` appends `## Answer (<who>) · impact: <impact>`; both print only the file's absolute path; `AGENT_CHAT FAILED` on a missing folder or file, or an existing `NN` file |
 | `acceptance.py <lane.md or PLAN.md> <worktree> [--only <ids>] [--log <dir> --lane <l>]` | enricher (Acceptance at the tip, `WAVE`), `impl-dev` (per item, with `--log`) | runs each item's `Acceptance:` command in the worktree, prints `<id> · exit <n>`, writes `<dir>/<lane>-<id>.log` |
 | `preflight.sh --base <hash> [--branch <b>] [--port <p>] [--lane <lane.md>] [--protected <a,b>]` | `impl-dev` and `impl-qa`, before any `git reset`/`branch` | checks agent worktree, branch, clean worktree, existing base, free port, lane and board; `PREFLIGHT FAILED` = `BLOCKED`, touching nothing |
 | `scope.sh <lane.md> <base> [<ref>]` | `impl-dev` at the end, orchestrator before the merge | changed files × `Owns:`/`May touch`/`Union:` of the lane (paths in backticks); `OUTSIDE:` = the lane fixes it before the merge |
@@ -68,13 +70,13 @@ Done: <id> <commit> <Acceptance: exit> (one per line)
 Current: <id> · uncommitted: <files or "nothing">
 Tests: <command> → <result>
 Next action: <exact>
-Open: <pending QUESTION/HUMAN>
+Open: <pending QUESTION/HUMAN, with the agent_chat/ file path>
 Fixes requested: <QA-… ids received and not committed, with the QA file, or "none">
 ```
 
 ## Files outside the worktree
 
-Retro, checkpoint, QA output and Acceptance log go to the absolute paths from the prompt, in `<root>/.impl/<slug>/` (the folders `qa/`, `retros/`, `progress/` and `acceptance/` already exist: the orchestrator creates them in phase 1). In an agent worktree the isolation guard refuses `Write`/`Edit` on those paths (seen in Claude Code 2.1.312): write through Bash, `cat > <absolute path> <<'EOF'` … `EOF`, one simple call per file, never `Write`/`Edit` outside the worktree. In the clone (enricher, QA mode `code`) `Write` works. Heredoc also refused: the content goes in your final answer, marked with the destination path, and the orchestrator writes it. The board is written only through `board.sh` (§ Scripts).
+Retro, checkpoint, QA output and Acceptance log go to the absolute paths from the prompt, in `<root>/.impl/<slug>/` (the folders `qa/`, `retros/`, `progress/`, `acceptance/` and `agent_chat/` already exist: the orchestrator creates them in phase 1). In an agent worktree the isolation guard refuses `Write`/`Edit` on those paths (seen in Claude Code 2.1.312): write through Bash, `cat > <absolute path> <<'EOF'` … `EOF`, one simple call per file, never `Write`/`Edit` outside the worktree. In the clone (enricher, QA mode `code`) `Write` works. Heredoc also refused: the content goes in your final answer, marked with the destination path, and the orchestrator writes it. The board is written only through `board.sh` (§ Scripts).
 
 The rule in one line: a file **inside** the worktree = `Write`/`Edit`, never a heredoc (the guard refused heredocs inside the worktree inconsistently in 5 lanes of a 2026-11-09 run, Claude Code 2.1.319); a file **outside** it = heredoc through Bash, never `Write`/`Edit`.
 
