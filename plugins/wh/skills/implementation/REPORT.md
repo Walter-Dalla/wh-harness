@@ -21,7 +21,7 @@ Enriched request (3 lines). Lanes: <lane: items, commits>. No PR: the merge comm
 Remaining test, check or lint failures, merge conflicts and how they were resolved, fixes made at integration.
 
 ## Open items
-Skipped or partial items and why; HUMAN lines; decisions taken without the owner (question, adopted option, alternative) and unconfirmed `[inferred]` profile lines; contracts that changed (fields) and what needs a joint deploy; scenarios for the profile's visual/e2e QA; profile sections left `—` and the phase that skipped. Each item line ends with the pending file id it became (`→ P-NNN`) or "(report only: no folder in _common § Pending)".
+Skipped or partial items and why; HUMAN lines; decisions taken without the owner (question, adopted option, alternative) and unconfirmed `[inferred]` profile lines; contracts that changed (fields) and what needs a joint deploy; scenarios for the profile's visual/e2e QA; profile sections left `—` and the phase that skipped. Each item line ends with the pending file id it became (`→ P-NNN`).
 
 ## Consultations
 One line per file of `<root>/.impl/<slug>/agent_chat/`: `<lane> <item> · <question, short> · <answer, short> · impact <impact> · <who answered>`. Those that ended in `OWNER:` or `replan` also became pending files (§ Open items).
