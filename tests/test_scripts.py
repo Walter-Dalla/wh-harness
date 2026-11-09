@@ -471,6 +471,48 @@ class ScriptsTest(unittest.TestCase):
         code, out = run(intake, self.tmp, os.path.join(self.tmp, 'missing'))
         self.assertEqual(code, 2, out)
 
+    # ---- agent_chat.sh
+
+    def test_agent_chat_creates_numbered_files_and_appends_answers(self):
+        chat_sh = os.path.join(SCRIPTS, 'agent_chat.sh')
+        impl = os.path.join(self.tmp, 'impl')
+        os.makedirs(impl)
+        code, out = run(chat_sh, self.tmp, impl, 'ask', 'f1', 'demo-1', 'f1', 'which field?')
+        self.assertEqual(code, 1, out)
+        self.assertIn('AGENT_CHAT FAILED:', out)
+        self.assertIn('does not exist (the orchestrator creates it in phase 1)', out)
+
+        chat = os.path.join(os.path.realpath(impl), 'agent_chat')
+        os.makedirs(chat)
+        code, out = run(chat_sh, self.tmp, impl, 'ask', 'f1', 'demo-1', 'f1', 'which', 'field?')
+        self.assertEqual((code, out), (0, os.path.join(chat, '01-f1-demo-1.md') + '\n'))
+        code, out = run(chat_sh, self.tmp, impl, 'ask', 'f2', 'demo-3', 'qa', 'is this a bug?')
+        self.assertEqual((code, out), (0, os.path.join(chat, '02-f2-demo-3.md') + '\n'))
+        first = os.path.join(chat, '01-f1-demo-1.md')
+        code, out = run(chat_sh, self.tmp, first, 'answer', 'enricher', 'other lanes: f2', 'use id, not name')
+        self.assertEqual((code, out), (0, first + '\n'))
+
+        date = r'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ'
+        with open(first, encoding='utf-8') as fh:
+            lines = fh.read().splitlines()
+        self.assertRegex(lines[0], rf'^# Chat 01 · f1 demo-1 · {date}$')
+        self.assertEqual(lines[1:5], ['', '## Question (f1)', '', 'which field?'])
+        self.assertEqual(lines[5], '')
+        self.assertRegex(lines[6], rf'^## Answer \(enricher\) · impact: other lanes: f2 · {date}$')
+        self.assertEqual(lines[7:], ['', 'use id, not name'])
+        self.assertRegex(lines[0].rsplit(' · ', 1)[1], r'^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$')
+        with open(os.path.join(chat, '02-f2-demo-3.md'), encoding='utf-8') as fh:
+            self.assertRegex(fh.read(), rf'^# Chat 02 · f2 demo-3 · {date}\n\n## Question \(qa\)\n\nis this a bug\?\n$')
+
+        code, out = run(chat_sh, self.tmp, os.path.join(chat, '09-x-y.md'), 'answer', 'enricher', 'item', 'ok')
+        self.assertEqual(code, 1, out)
+        self.assertIn('09-x-y.md does not exist', out)
+        for args in ((), (impl,), (impl, 'ask', 'f1', 'demo-1', 'f1'), (first, 'answer', 'enricher', 'item'),
+                     (impl, 'tell', 'f1', 'demo-1', 'f1', 'x')):
+            code, out = run(chat_sh, self.tmp, *args)
+            self.assertEqual(code, 2, args)
+            self.assertIn('AGENT_CHAT FAILED: usage: agent_chat.sh', out)
+
 
 if __name__ == '__main__':
     unittest.main()
