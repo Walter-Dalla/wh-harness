@@ -1,53 +1,53 @@
 ---
 name: feature-docs
-description: Cria ou atualiza o mapa de features do repositório (índice + um arquivo por feature, interações em sincronia). Use quando uma feature nasce, muda ou sai.
+description: Creates or updates the repository's feature map (index + one file per feature, interactions in sync). Use when a feature is born, changes or leaves.
 ---
 
-# Mapa de features
+# Feature map
 
-Perfil do projeto (injetado; `PERFIL_AUSENTE` = `Skill(wh:perfil, "feature-docs")` e depois `Read` dos dois arquivos, porque a injeção abaixo rodou antes de o perfil existir):
-!`cat .claude/perfil/_comum.md .claude/perfil/feature-docs.md 2>/dev/null || echo PERFIL_AUSENTE`
+Project profile (injected; `PROFILE_MISSING` = `Skill(wh:profile, "feature-docs")` and then `Read` both files, because the injection below ran before the profile existed):
+!`cat .claude/profile/_common.md .claude/profile/feature-docs.md 2>/dev/null || echo PROFILE_MISSING`
 
-O mapa é um dicionário sob demanda para agentes: um índice + um arquivo por feature (perfil § Pasta). Agentes leem o índice e só o arquivo de que precisam, então cada arquivo fica curto, exato e autocontido. Idioma e formato: perfil § Formato.
+The map is an on-demand dictionary for agents: an index + one file per feature (profile § Folder). Agents read the index and only the file they need, so each file stays short, exact and self-contained. Language and format: profile § Format.
 
-O mapa descreve **comportamento**: fluxo, regras, quem é dono de cada regra. Onde o código mora fica com o código (`_comum § Navegação`): nenhuma seção "Código"/"Endpoints", nenhuma lista de arquivos ou rotas (apodrecem em silêncio). Classe, função ou constante entra só inline, quando é dona de uma regra que um agente precisa achar.
+The map describes **behavior**: flow, rules, who owns each rule. Where the code lives stays with the code (`_common § Navigation`): no "Code"/"Endpoints" section, no list of files or routes (they rot silently). A class, function or constant appears only inline, when it owns a rule an agent needs to find.
 
-## 1. Entender a entrada
+## 1. Understand the input
 
-Feature nova, mudada ou removida; diff; intervalo de commits; ou descrição. Só um tema: descubra o que mudou (`git diff`, `git log`, changelog, status de features). Leia o índice; os outros arquivos ainda não.
+New, changed or removed feature; diff; commit range; or description. Only a topic: find out what changed (`git diff`, `git log`, changelog, feature status). Read the index; not the other files yet.
 
-## 2. Categorizar
+## 2. Categorize
 
-Compare com a tabela do índice (ids, palavras-chave, serviços) e decida:
+Compare with the index table (ids, keywords, services) and decide:
 
-- **Arquivo existente** (o padrão): a entrada muda regra, fluxo, endpoint ou dependência de uma feature listada, ou acrescenta variação dela.
-- **Arquivo novo**: só quando a entrada tem loop próprio para o usuário **e** dono próprio no código (serviço/entidade/endpoints ou painel). Helper, regra ou campo novo nunca é arquivo novo.
-- **Vários arquivos**: mudança transversal; o arquivo dono por completo e só a linha de "Interações" dos afetados.
-- **Remoção**: seção/arquivo sai com todo link e linha do índice que apontava para ele.
+- **Existing file** (the default): the input changes a rule, flow, endpoint or dependency of a listed feature, or adds a variation of it.
+- **New file**: only when the input has its own user loop **and** its own owner in the code (service/entity/endpoints or panel). A helper, rule or new field is never a new file.
+- **Several files**: cross-cutting change; the owning file in full and only the "Interactions" line of the affected ones.
+- **Removal**: the section/file leaves with every link and index line that pointed at it.
 
-Dois arquivos igualmente plausíveis, ou arquivo novo que dividiria um existente: pergunte antes de escrever. Depois leia os arquivos-alvo e os vizinhos de "Interações" que a mudança toca.
+Two equally plausible files, or a new file that would split an existing one: ask before writing. Then read the target files and the "Interactions" neighbors the change touches.
 
-**Feito quando cada parte da entrada tem um arquivo-alvo e uma categoria.**
+**Done when each part of the input has a target file and a category.**
 
-## 3. Colher fatos do código
+## 3. Gather facts from the code
 
-Cada afirmação sai do código aberto agora, não da memória nem do texto do pedido, pela camada (perfil § Camadas): o fluxo e as regras com o dono de cada uma; chamadas para outras features e delas; o que o usuário vê no cliente; números citando a constante, com o valor só quando ele explica o comportamento.
+Every claim comes from code opened now, not from memory nor from the request text, per layer (profile § Layers): the flow and the rules with the owner of each; calls to other features and from them; what the user sees in the client; numbers citing the constant, with the value only when it explains the behavior.
 
-**Feito quando toda regra que você vai escrever tem o símbolo dono lido.**
+**Done when every rule you are about to write has its owning symbol read.**
 
-## 4. Escrever
+## 4. Write
 
-Modelo do arquivo: perfil § Modelo (20–50 linhas; corte detalhe antes de passar). Regras:
+File template: profile § Template (20–50 lines; cut detail before exceeding). Rules:
 
-- **Fonte única.** Regra transversal fica nos docs de regras do perfil § Fontes de regra: aponte a seção em vez de copiar. Regra de uma feature só vive em `## Invariantes` do arquivo dela; movê-la para lá a partir do doc transversal é o caminho normal. Status e roadmap no doc de status; histórico no changelog. O mapa descreve só o estado atual: nenhum "antes era".
-- **Interações nos dois lados.** Dependência criada ou removida em A aparece também em "Interações" de B.
-- **Índice** em sincronia: perfil § Índice diz quais partes (tabela, quem chama quem, diagrama, moedas) e quando cada uma muda.
-- Nome de arquivo: perfil § Formato. Renomear = corrigir todo link (grep).
+- **Single source.** A cross-cutting rule lives in the rule docs of profile § Rule sources: point at the section instead of copying. A rule of one feature lives only in `## Invariants` of its file; moving it there from the cross-cutting doc is the normal path. Status and roadmap in the status doc; history in the changelog. The map describes only the current state: no "it used to be".
+- **Interactions on both sides.** A dependency created or removed in A also appears in B's "Interactions".
+- **Index** in sync: profile § Index says which parts (table, who calls whom, diagram, currencies) and when each one changes.
+- File name: profile § Format. Renaming = fix every link (grep).
 
-## 5. Verificar
+## 5. Verify
 
-Os comandos do perfil § Verificação. Pronto quando: todos saem 0 e sem linha `MISSING`/`NO-PROPERTIES`; todo arquivo dentro do limite do perfil; todo símbolo citado que você não abriu no passo 3 existe (grep); nenhuma seção "Código"/"Endpoints" nem lista de arquivos ou rotas.
+The commands of profile § Verification. Done when: all exit 0 with no `MISSING`/`NO-PROPERTIES` line; every file within the profile's limit; every cited symbol you did not open in step 3 exists (grep); no "Code"/"Endpoints" section nor list of files or routes.
 
-## 6. Relatar
+## 6. Report
 
-Quais arquivos mudaram e por que a entrada foi para lá (a categorização), e o que não deu para confirmar no código. Commit só se pedirem.
+Which files changed and why the input went there (the categorization), and what could not be confirmed in the code. Commit only if asked.

@@ -1,9 +1,10 @@
 # wh-harness
 
-Plugin `wh` para Claude Code: procedimentos genéricos (skills, agentes, hook) que leem os fatos de cada projeto em `.claude/perfil/`.
+`wh` plugin for Claude Code: generic procedures (skills, agents, hook) that read each project's facts from `.claude/profile/`.
 
-- Mapa completo e mecanismos: `docs/MANUAL.pt-BR.md`. Visão curta em inglês: `README.md`.
-- Skills: `plugins/wh/skills/<skill>/SKILL.md` (+ `PERFIL.md`, o modelo do perfil). Agentes: `plugins/wh/agents/`. Hook: `plugins/wh/hooks/hooks.json` → `plugins/wh/scripts/prompt_graph.py`.
-- Regra: a skill tem o procedimento, o perfil tem os fatos. Nenhuma skill ou agente cita um comando de projeto; cita `perfil § Seção`.
-- Testes: `python3 -m unittest discover -s tests` (hook contra `examples/demo`, `escopo.sh`, `preflight.sh`, `checar.py`). Scripts de shell passam por `bash -n` e `shellcheck -S warning` no CI.
-- Mudou uma skill ou o hook: suba `version` em `plugins/wh/.claude-plugin/plugin.json` e ajuste o `MANUAL`.
+- Full map and mechanisms: `docs/MANUAL.md`. Short overview: `README.md`.
+- Skills: `plugins/wh/skills/<skill>/SKILL.md` (+ `PROFILE.md`, the profile template). Agents: `plugins/wh/agents/`. Hook: `plugins/wh/hooks/hooks.json` → `plugins/wh/scripts/prompt_graph.py`.
+- Everything is written in English: skills, templates, agents, scripts, docs. A project's profile follows the `##` headings of the template.
+- Rule: the skill has the procedure, the profile has the facts. No skill or agent cites a project command; it cites `profile § Section`.
+- Tests: `python3 -m unittest discover -s tests` (hook against `examples/demo`, `scope.sh`, `preflight.sh`, `check.py`, section references). Shell scripts go through `bash -n` and `shellcheck -S warning` in CI.
+- Changed a skill or the hook: bump `version` in `plugins/wh/.claude-plugin/plugin.json` and adjust the `MANUAL`.

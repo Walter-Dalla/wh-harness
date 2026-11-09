@@ -1,33 +1,33 @@
 ---
 name: start-app
-description: Sobe, para ou reinicia o app do repositório (serviços e cliente) e confere que respondem. Use para rodar, iniciar, parar ou reiniciar o app.
+description: Starts, stops or restarts the repository's app (services and client) and checks that they respond. Use to run, start, stop or restart the app.
 ---
 
-# Subir o app
+# Start the app
 
-Perfil do projeto (injetado; `PERFIL_AUSENTE` = `Skill(wh:perfil, "start-app")` e depois `Read` dos dois arquivos, porque a injeção abaixo rodou antes de o perfil existir):
-!`cat .claude/perfil/_comum.md .claude/perfil/start-app.md 2>/dev/null || echo PERFIL_AUSENTE`
+Project profile (injected; `PROFILE_MISSING` = `Skill(wh:profile, "start-app")` and then `Read` both files, because the injection below ran before the profile existed):
+!`cat .claude/profile/_common.md .claude/profile/start-app.md 2>/dev/null || echo PROFILE_MISSING`
 
-Da raiz do checkout do `_comum § Clone`, com a toolchain do `_comum § Toolchain`. Esta skill é a interativa: usa as portas do dono (`_comum § Portas`); as outras skills sobem o próprio serviço em porta própria.
+From the root of the `_common § Clone` checkout, with the `_common § Toolchain`. This is the interactive skill: it uses the owner's ports (`_common § Ports`); the other skills bring up their own service on their own port.
 
-## 1. Serviços
+## 1. Services
 
-Na ordem do perfil § Serviços: o comando `start` de cada um; pronto quando o health do perfil responde. Falha: as últimas linhas do log que o perfil nomeia, na resposta. Porta ocupada por processo que não é deste repo: pergunte antes de derrubar.
+In the order of profile § Services: each one's `start` command; ready when the profile's health responds. Failure: the last lines of the log the profile names, in the answer. Port taken by a process that is not from this repo: ask before killing it.
 
-**Feito quando todo serviço do perfil responde ao health.**
+**Done when every service in the profile answers its health check.**
 
-## 2. Cliente
+## 2. Client
 
-Perfil § Cliente: o comando, em background (`run_in_background: true`) quando abre janela. Sem janela (sessão sem display, só conferir render): a alternativa do perfil § Cliente.
+Profile § Client: the command, in the background (`run_in_background: true`) when it opens a window. Windowless (session without display, only checking the render): the alternative from profile § Client.
 
-## 3. Alternativa
+## 3. Alternative
 
-Perfil § Alternativa (Docker ou outro), só quando pedida ou quando a toolchain nativa falta no checkout. Mesma porta que o nativo: pare um antes do outro.
+Profile § Alternative (Docker or other), only when asked or when the native toolchain is missing in the checkout. Same port as the native one: stop one before the other.
 
-## Parar
+## Stop
 
-`stop` do perfil § Serviços e o processo do cliente que você subiu (`kill <pid>`; o `_comum § Toolchain` diz o equivalente por SO). Processo que não foi você que subiu: pergunte. Estado do dono (perfil § Estado) fica como está; comando que apaga estado pede confirmação.
+`stop` from profile § Services and the client process you started (`kill <pid>`; `_common § Toolchain` gives the per-OS equivalent). A process you did not start: ask. The owner's state (profile § State) stays as is; a command that deletes state asks for confirmation.
 
-## Responder
+## Answer
 
-Uma linha por serviço vivo (URL, porta, PID, log), o cliente, o que foi pulado e por quê.
+One line per live service (URL, port, PID, log), the client, what was skipped and why.

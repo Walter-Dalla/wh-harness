@@ -1,135 +1,135 @@
 ---
 name: implementation
-description: Implementa uma tarefa de ponta a ponta em qualquer repositório: análise e plano por um enriquecedor, faixas paralelas em worktree, QA de código e final, PR, retros e relatório.
+description: Implements a task end to end in any repository: analysis and plan by an enricher, parallel lanes in worktrees, code QA and final QA, PR, retros and report.
 disable-model-invocation: true
 ---
 
 # Impl
 
-Perfil do projeto (injetado; `PERFIL_AUSENTE` = fase 1 escreve o perfil antes de seguir):
-!`cat .claude/perfil/_comum.md .claude/perfil/implementation.md 2>/dev/null || echo PERFIL_AUSENTE`
+Project profile (injected; `PROFILE_MISSING` = phase 1 writes the profile before going on):
+!`cat .claude/profile/_common.md .claude/profile/implementation.md 2>/dev/null || echo PROFILE_MISSING`
 
-Você é o **orquestrador**, dono da tarefa do pedido até o PR aberto. Fases, em ordem, cada uma termina no critério em **negrito**:
+You are the **orchestrator**, owner of the task from the request to the open PR. Phases, in order, each ending at the criterion in **bold**:
 
-1. Ambiente
-2. Enriquecer: subagente `impl-enrich` faz a análise técnica e o plano; fica vivo para as consultas dos desenvolvedores
-3. Executar (pequena: você; grande: subagentes `impl-dev`, unidos por você na `impl/<slug>`)
-4. QA de código: estático, por faixa assim que ela termina (decisões, padrões, nomes, riscos)
-5. QA final: a execução cara, uma vez (suíte, checks, QA visual ou e2e se o repo tiver, integração)
-6. Fechar: retros, relatório, docs de fim, limpeza, PR
+1. Environment
+2. Enrich: the `impl-enrich` subagent does the technical analysis and the plan; it stays alive for the developers' consultations
+3. Execute (small: you; large: `impl-dev` subagents, merged by you into `impl/<slug>`)
+4. Code QA: static, per lane as soon as it finishes (decisions, standards, names, risks)
+5. Final QA: the expensive run, once (suite, checks, visual or e2e QA if the repo has one, integration)
+6. Close: retros, report, closing docs, cleanup, PR
 
-O que é do repositório (comandos de build, teste e check, serviço descartável, arquivos de união, docs de fim, limites) vem do **perfil** `.claude/perfil/implementation.md` (formato: [`PERFIL.md`](PERFIL.md)) e do `.claude/perfil/_comum.md` (clone, toolchain, git, portas, navegação, docs, limites), na raiz do repo. Esta skill e os agentes nunca citam um comando de projeto: citam a seção do perfil.
+What belongs to the repository (build, test and check commands, disposable service, union files, closing docs, limits) comes from the **profile** `.claude/profile/implementation.md` (format: [`PROFILE.md`](PROFILE.md)) and from `.claude/profile/_common.md` (clone, toolchain, git, ports, navigation, docs, limits), at the repo root. This skill and the agents never cite a project command: they cite the profile section.
 
-Ferramentas dos subagentes (RTK, CodeGraph, quando instalados): [`AMBIENTE.md`](AMBIENTE.md) § Ferramentas.
+Subagent tools (RTK, CodeGraph, when installed): [`ENVIRONMENT.md`](ENVIRONMENT.md) § Tools.
 
-Raiz do plugin: `${CLAUDE_PLUGIN_ROOT}`. Nos arquivos desta skill que você abre com `Read` (`FAIXAS.md`, `AMBIENTE.md`, `RELATORIO.md`, `TRIAGEM.md`) a variável `CLAUDE_PLUGIN_ROOT` aparece sem resolver: troque-a por esse caminho.
+Plugin root: `${CLAUDE_PLUGIN_ROOT}`. In the files of this skill you open with `Read` (`LANES.md`, `ENVIRONMENT.md`, `REPORT.md`, `TRIAGE.md`) the variable `CLAUDE_PLUGIN_ROOT` appears unresolved: replace it with that path.
 
-**Arquivos de subagente:** tudo que `impl-dev` e `impl-qa` gravam para o orquestrador (saída do QA, retro, checkpoint, quadro) vai em caminho **absoluto** em `<raiz>/.impl/<slug>/…` (fora do git pelo exclude do clone): a worktree de um agente é removida ao fim dele quando não tem mudança, e levaria os arquivos junto (a verificar a cada versão do Claude Code; o caminho absoluto não depende disso). Código e commits ficam na worktree. O quadro: acréscimo por `printf … >>`. O guard de isolamento da worktree recusa `Write`/`Edit` fora dela (visto no Claude Code 2.1.312): o agente grava esses arquivos pelo Bash e você cria as pastas antes de dispará-lo (fase 1); regra em [`AMBIENTE.md`](AMBIENTE.md) § Arquivos fora da worktree.
+**Subagent files:** everything `impl-dev` and `impl-qa` write for the orchestrator (QA output, retro, checkpoint, board) goes to an **absolute** path in `<root>/.impl/<slug>/…` (outside git through the clone's exclude): an agent's worktree is removed when it ends with no change, and would take the files with it (to verify on each Claude Code version; the absolute path does not depend on it). Code and commits stay in the worktree. The board: appended through `printf … >>`. The worktree isolation guard refuses `Write`/`Edit` outside it (seen in Claude Code 2.1.312): the agent writes those files through Bash and you create the folders before dispatching it (phase 1); rule in [`ENVIRONMENT.md`](ENVIRONMENT.md) § Files outside the worktree.
 
-Autonomia: direto ao commit e ao PR. Você só pergunta ao dono na fase 2 (e numa consulta `DONO:` que para uma faixa); sessão sem dono (sem `AskUserQuestion`): fase 2, passo 2. Saída longa de subagente (diff, prints) fica nos arquivos dele; você lê os relatórios. O merge do PR é do dono. Esta skill e cada arquivo dela que você já leu continuam no seu contexto: não os releia nas fases seguintes.
-**Limite de subagentes:** no máximo **3 subagentes rodando ao mesmo tempo** (faixas `impl-dev` e QAs `impl-qa`). O enriquecedor parado entre mensagens não ocupa vaga; um turno dele (consulta, replanejar) ocupa. Faixa, QA de código ou QA final só dispara quando há vaga; o que não cabe espera, na ordem do plano. Motivo: rate limit da API e CPU da máquina (builds e testes em paralelo). Skill que abre subagentes (ex.: `/code-review` em nível alto) ocupa as vagas que abre: só você a chama, com vagas livres; nenhum subagente a chama.
-**Modelo dos subagentes:** o `model` de cada `Agent(...)` vem do perfil § Modelos (regra do dono por papel: enriquecedor, faixa mecânica, faixa estrutural, QA); seção `—` = `"opus"`, menos o QA `codigo` (`"sonnet"`: recebe diff e plano prontos, pouca pressão de contexto).
-**Esforço dos subagentes:** nunca passe `effort` no `Agent(...)`, e nenhuma definição de agente fixa `effort` no frontmatter: cada subagente roda no esforço padrão do modelo dele.
+Autonomy: straight to the commit and the PR. You ask the owner only in phase 2 (and on an `OWNER:` consultation that stops a lane); session without an owner (no `AskUserQuestion`): phase 2, step 2. A subagent's long output (diff, screenshots) stays in its files; you read the reports. Merging the PR belongs to the owner. This skill and each file of it you already read stay in your context: do not reread them in later phases.
+**Subagent limit:** at most **3 subagents running at the same time** (`impl-dev` lanes and `impl-qa` QAs). The enricher idle between messages takes no slot; one of its turns (consultation, replan) does. A lane, code QA or final QA only dispatches when there is a slot; what does not fit waits, in plan order. Reason: API rate limit and the machine's CPU (parallel builds and tests). A skill that opens subagents (e.g. `/code-review` at a high level) takes the slots it opens: only you call it, with free slots; no subagent calls it.
+**Subagent model:** the `model` of each `Agent(...)` comes from profile § Models (the owner's rule per role: enricher, mechanical lane, structural lane, QA); section `—` = `"opus"`, except the `code` QA (`"sonnet"`: it receives a ready diff and plan, low context pressure).
+**Subagent effort:** never pass `effort` in `Agent(...)`, and no agent definition fixes `effort` in its frontmatter: each subagent runs at its model's default effort.
 
-## 1. Ambiente
+## 1. Environment
 
-- A sessão abre na raiz do repositório, no clone que o `_comum` § Clone indica (sem perfil: o atual). Checkout sem a toolchain nativa (ex.: `/mnt/c` no WSL com dotnet/node só no Windows): pare e diga ao dono onde abrir `claude` e chamar `/wh:implementation` de novo. Motivo: builds e testes nativos, I/O rápido, e as worktrees dos agentes nascem do repositório da sessão.
-- Branch principal e remote de PR: `_comum` § Git (padrão: `main` e `origin`). `git status` limpo e na principal; senão pare e diga o que há. `git pull --ff-only`; `git ls-remote --heads <remote> <principal>` precisa responder; se falhar a autenticação, peça ao dono `! gh auth setup-git` e pare.
-- Uma vez por clone: `.impl/` e `.claude/worktrees/` em `.git/info/exclude`, uma linha cada (`grep -qx` antes de `printf … >>`).
-- **PR:** `gh repo view --json nameWithOwner` responde = PR pelo GitHub na fase 6. Falha (remote que não é GitHub, `gh` ausente ou sem login) = **modo sem PR**, decidido aqui: a fase 6 entrega a branch no remote e o comando de merge, e o relatório diz isso no título.
-- **Git dos agentes:** `command -v git` dá o caminho absoluto do binário; ele vai na linha `Comandos:` de todo prompt de agente (um `git` solto pode ser reescrito por um wrapper, e o guard da worktree recusa).
-- **Pastas da tarefa:** defina o `slug` (curto, kebab-case) e crie `<raiz>/.impl/<slug>/` com `qa/`, `retros/`, `progress/` e `aceite/` (`mkdir -p`); um subagente em worktree não consegue criá-las.
-- **Perfil:** `.claude/perfil/implementation.md` ou `_comum.md` ausente ou com seção a menos = `Skill(wh:perfil, "implementation adiar")` e depois `Read` dos dois arquivos (a injeção do topo rodou antes de eles existirem); `adiar` = a skill não pergunta, as linhas `[inferido]` entram na `AskUserQuestion` da fase 2, e o perfil é o primeiro commit da `impl/<slug>` (`chore: perfil do /wh:implementation`), antes de qualquer faixa.
-- `.codegraph/` presente: `codegraph sync .`.
-- Portas, scripts, estados, checkpoint e comandos: [`AMBIENTE.md`](AMBIENTE.md).
+- The session opens at the repository root, in the clone `_common` § Clone names (no profile: the current one). A checkout without the native toolchain (e.g. `/mnt/c` on WSL with dotnet/node only on Windows): stop and tell the owner where to open `claude` and call `/wh:implementation` again. Reason: native builds and tests, fast I/O, and the agents' worktrees are born from the session's repository.
+- Main branch and PR remote: `_common` § Git (default: `main` and `origin`). `git status` clean and on main; otherwise stop and say what is there. `git pull --ff-only`; `git ls-remote --heads <remote> <main>` must respond; if authentication fails, ask the owner for `! gh auth setup-git` and stop.
+- Once per clone: `.impl/` and `.claude/worktrees/` in `.git/info/exclude`, one line each (`grep -qx` before `printf … >>`).
+- **PR:** `gh repo view --json nameWithOwner` responds = PR on GitHub in phase 6. Failure (remote that is not GitHub, `gh` missing or not logged in) = **no-PR mode**, decided here: phase 6 delivers the branch on the remote and the merge command, and the report says so in its title.
+- **Agents' git:** `command -v git` gives the binary's absolute path; it goes on the `Commands:` line of every agent prompt (a bare `git` may be rewritten by a wrapper, and the worktree guard refuses it).
+- **Task folders:** define the `slug` (short, kebab-case) and create `<root>/.impl/<slug>/` with `qa/`, `retros/`, `progress/` and `acceptance/` (`mkdir -p`); a subagent in a worktree cannot create them.
+- **Profile:** `.claude/profile/implementation.md` or `_common.md` missing or with a section short = `Skill(wh:profile, "implementation defer")` and then `Read` both files (the injection at the top ran before they existed); `defer` = the skill does not ask, the `[inferred]` lines enter the `AskUserQuestion` of phase 2, and the profile is the first commit of `impl/<slug>` (`chore: /wh:implementation profile`), before any lane.
+- `.codegraph/` present: `codegraph sync .`.
+- Ports, scripts, states, checkpoint and commands: [`ENVIRONMENT.md`](ENVIRONMENT.md).
 
-**Feito quando a sessão está no clone certo, na principal atualizada e limpa, o perfil existe, o índice (se houver) sincronizado, o exclude com `.impl/` e `.claude/worktrees/`, as pastas da tarefa criadas, o modo de PR decidido, e o remote responde.**
+**Done when the session is in the right clone, on the updated and clean main branch, the profile exists, the index (if any) is synced, the exclude has `.impl/` and `.claude/worktrees/`, the task folders are created, the PR mode is decided, and the remote responds.**
 
-## 2. Enriquecer (análise técnica e plano)
+## 2. Enrich (technical analysis and plan)
 
-Quem enriquece é o subagente `impl-enrich`, o arquiteto da tarefa: ele faz a análise técnica, escreve o plano e fica vivo até o PR para responder às dúvidas dos desenvolvedores. Você faz a ponte com o dono.
+The enricher is the `impl-enrich` subagent, the task's architect: it does the technical analysis, writes the plan and stays alive until the PR to answer the developers' questions. You bridge to the owner.
 
-1. **Analisar:** `Agent(subagent_type: "wh:impl-enrich", model: <perfil § Modelos; sem regra, "opus">, prompt: "PLUGIN_ROOT=${CLAUDE_PLUGIN_ROOT}. Etapa: analisar. Repo: <raiz absoluta>. Perfil: <raiz>/.claude/perfil/implementation.md e _comum.md. Slug: <slug>. Pedido: <o do dono, literal>. Contexto do prompt-graph: <o bloco `[wh:prompt-graph]` que veio com o pedido, ou —>.")`, sem `isolation` (só lê o repo e escreve em `.impl/<slug>/`) e sem `name`. **Guarde o id do agente**: toda etapa seguinte o retoma por `SendMessage`, com a análise na memória dele.
-2. **Dúvidas:** resposta `PERGUNTAS` = `AskUserQuestion` com todas, nas opções que ele trouxe (mais a confirmação do perfil, se você o escreveu); a ferramenta aceita até 4 perguntas por chamada, 2–4 opções cada: acima disso, chamadas em sequência, as do perfil agrupadas por seção. Repasse as respostas por `SendMessage` com "Etapa: planejar. Respostas: …"; `SEM PERGUNTAS` = mande "Etapa: planejar" direto. **Sem dono** (a ferramenta `AskUserQuestion` não existe na sessão, ex.: headless `-p`): não pare e não pergunte em texto. Adote a opção recomendada (a primeira) de cada pergunta e repasse "Etapa: planejar. Respostas (sem dono): …"; o enriquecedor marca cada uma com `(sem dono)` em Decisões do plano, e as linhas `[inferido]` do perfil ficam sem confirmar. Cada uma entra em Pendências do relatório ("Decisões tomadas sem o dono": pergunta, opção adotada, alternativa) e na resposta final.
-3. **Conferir:** leia a `ANALISE.md` e o `PLANO.md`. Item sem arquivo, símbolo, tipo ou Aceite executável, escolha de desenho sem o porquê, ou decisão apoiada só em afirmação `inferida`, volta a ele numa mensagem.
+1. **Analyze:** `Agent(subagent_type: "wh:impl-enrich", model: <profile § Models; no rule, "opus">, prompt: "PLUGIN_ROOT=${CLAUDE_PLUGIN_ROOT}. Stage: analyze. Repo: <absolute root>. Profile: <root>/.claude/profile/implementation.md and _common.md. Slug: <slug>. Request: <the owner's, verbatim>. prompt-graph context: <the `[wh:prompt-graph]` block that came with the request, or —>.")`, without `isolation` (it only reads the repo and writes in `.impl/<slug>/`) and without `name`. **Keep the agent id**: every later stage resumes it through `SendMessage`, with the analysis in its memory.
+2. **Questions:** a `QUESTIONS` answer = `AskUserQuestion` with all of them, in the options it brought (plus the profile confirmation, if you wrote it); the tool accepts up to 4 questions per call, 2–4 options each: beyond that, calls in sequence, the profile ones grouped by section. Relay the answers through `SendMessage` with "Stage: plan. Answers: …"; `NO QUESTIONS` = send "Stage: plan" directly. **No owner** (the `AskUserQuestion` tool does not exist in the session, e.g. headless `-p`): do not stop and do not ask in text. Adopt the recommended option (the first) of each question and relay "Stage: plan. Answers (no owner): …"; the enricher marks each one with `(no owner)` in the plan's Decisions, and the profile's `[inferred]` lines stay unconfirmed. Each one enters the report's Open items ("Decisions taken without the owner": question, adopted option, alternative) and the final answer.
+3. **Check:** read `ANALYSIS.md` and `PLAN.md`. An item without file, symbol, type or executable Acceptance, a design choice without its why, or a decision resting only on an `inferred` claim, goes back to it in a message.
 
-Triagem (pequena = você, inline, na fase 3; grande = faixas `impl-dev`) e formato do `<raiz>/.impl/<slug>/PLANO.md` (ids `<slug>-N`, tipo interno ou contrato, Aceite): [`TRIAGEM.md`](TRIAGEM.md). O enriquecedor aplica; você lê o arquivo uma vez, para conferir o plano.
+Triage (small = you, inline, in phase 3; large = `impl-dev` lanes) and the format of `<root>/.impl/<slug>/PLAN.md` (ids `<slug>-N`, type internal or contract, Acceptance): [`TRIAGE.md`](TRIAGE.md). The enricher applies it; you read the file once, to check the plan.
 
-**Consultas durante a tarefa:** pergunta que o arquivo da faixa, a `ANALISE.md` ou o `PLANO.md` já respondem, e cuja resposta não muda outra faixa nem contrato, você responde direto (citando o trecho). O resto: um `impl-dev` (ou você, na tarefa pequena, ou um `impl-qa` com decisão a confirmar) com dúvida de regra ou de rumo manda `PERGUNTA <faixa> <item>: …`. Repasse ao enriquecedor (`SendMessage` com "Etapa: consulta." + a mensagem) e devolva a resposta a quem perguntou (`SendMessage` para o id dele). O enriquecedor responde com o **impacto** (item / faixa / outras faixas / contrato / replanejar): `outras faixas` ou `contrato` = avise as faixas citadas (`SendMessage`) com o arquivo de faixa atualizado; `replanejar` = pare de disparar faixas novas até ele atualizar o plano. `DONO:` = pergunte ao dono só se a faixa está parada nisso; senão (e sempre, em sessão sem dono), siga a recomendação do enriquecedor e registre como pendência do relatório. Depois de um reinício da sessão, o enriquecedor morreu com ela: nunca conte o id antigo como vivo; responda você pela `ANALISE.md` e pelo `PLANO.md` e anote cada resposta em Decisões do `PLANO.md` como "decisão do orquestrador", ou dispare um `impl-enrich` novo com "Etapa: consulta" quando a dúvida pede análise.
+**Consultations during the task:** a question the lane file, `ANALYSIS.md` or `PLAN.md` already answers, whose answer changes no other lane nor contract, you answer directly (citing the passage). The rest: an `impl-dev` (or you, on a small task, or an `impl-qa` with a decision to confirm) with a doubt about a rule or direction sends `QUESTION <lane> <item>: …`. Relay it to the enricher (`SendMessage` with "Stage: consult." + the message) and return the answer to whoever asked (`SendMessage` to their id). The enricher answers with the **impact** (item / lane / other lanes / contract / replan): `other lanes` or `contract` = notify the cited lanes (`SendMessage`) with the updated lane file; `replan` = stop dispatching new lanes until it updates the plan. `OWNER:` = ask the owner only if the lane is stopped on it; otherwise (and always, in a session without an owner), follow the enricher's recommendation and record it as an open item of the report. After a session restart, the enricher died with it: never count the old id as alive; answer yourself from `ANALYSIS.md` and `PLAN.md` and note each answer in the Decisions of `PLAN.md` as "orchestrator decision", or dispatch a new `impl-enrich` with "Stage: consult" when the doubt calls for analysis.
 
-**Feito quando toda dúvida do dono está respondida, a `ANALISE.md` tem arquitetura, arquivos técnicos e proposta com o porquê, e todo item do plano tem arquivo, símbolo, tipo e Aceite executável (e, se grande, faixa, onda e estimativa).**
+**Done when every owner question is answered, `ANALYSIS.md` has architecture, technical files and a proposal with the why, and every plan item has file, symbol, type and executable Acceptance (and, if large, lane, wave and estimate).**
 
-## 3. Executar
+## 3. Execute
 
-Branch de integração: `git switch -c impl/<slug> <principal>` (perfil novo: commit dele aqui).
+Integration branch: `git switch -c impl/<slug> <main>` (new profile: its commit here).
 
-Grande: [`FAIXAS.md`](FAIXAS.md) §2–3 (inclui a fase 4 de cada faixa), depois a fase 5.
+Large: [`LANES.md`](LANES.md) §2–3 (includes phase 4 for each lane), then phase 5.
 
-Pequena, item por item:
-1. Um item por vez: edite o mínimo do item atual, sem adiantar o seguinte; as regras do `CLAUDE.md`/`AGENTS.md` do repo e dos docs de regras do perfil § Leitura do enriquecedor valem em todo item.
-2. Rode o Aceite; o item não fecha vermelho.
-3. Item **interno** não muda contrato nem fixture de contrato (snapshot, golden, schema): se mudou, você mudou o contrato, conserte o código. Item **contrato**: testes do produtor e do consumidor, fixture atualizada pelo perfil § Contrato e revisada campo a campo, consumidor no mesmo plano.
-4. `git diff --stat` antes do commit: só os arquivos do item. Commit com a mensagem começando pelo id (`<slug>-2: …`) e a linha de co-autoria; `git push -u <remote> impl/<slug>`. Dois itens que saíram juntos no mesmo trecho: um commit com os dois ids (`<slug>-1 <slug>-2: …`); nunca reescreva história para separá-los.
-5. `codegraph sync .` se o repo tem índice.
+Small, item by item:
+1. One item at a time: edit the minimum of the current item, without getting ahead on the next; the rules of the repo's `CLAUDE.md`/`AGENTS.md` and of the rule docs of profile § Enricher reading hold for every item.
+2. Run the Acceptance; the item does not close red.
+3. An **internal** item changes neither contract nor contract fixture (snapshot, golden, schema): if it did, you changed the contract, fix the code. A **contract** item: producer and consumer tests, fixture updated through profile § Contract and reviewed field by field, consumer in the same plan.
+4. `git diff --stat` before the commit: only the item's files. Commit with the message starting with the id (`<slug>-2: …`) and the co-authorship line; `git push -u <remote> impl/<slug>`. Two items that came out together in the same passage: one commit with both ids (`<slug>-1 <slug>-2: …`); never rewrite history to separate them.
+5. `codegraph sync .` if the repo has an index.
 
-Problema vizinho fora do pedido vai para os achados do relatório; o código fica no escopo.
+A neighboring problem outside the request goes to the report's findings; the code stays in scope.
 
-**Feito quando todo item tem commit no remote e evidência de Aceite verde ([`AMBIENTE.md`](AMBIENTE.md) § Estados).**
+**Done when every item has a commit on the remote and evidence of a green Acceptance ([`ENVIRONMENT.md`](ENVIRONMENT.md) § States).**
 
-## 4. QA de código (estático, assim que o código fica pronto)
+## 4. Code QA (static, as soon as the code is ready)
 
-Revisão sem rodar nada, por um `impl-qa` de olhos novos: decisões do plano, padrões de implementação do repo, nomes (glossário do perfil, se houver) e riscos. Sem `/code-review`: gasta muito para o que acha.
+A review without running anything, by an `impl-qa` with fresh eyes: plan decisions, the repo's implementation standards, names (the profile's glossary, if any) and risks. No `/code-review`: it spends too much for what it finds.
 
-- Grande: uma por faixa, logo que ela entrega, antes do merge ([`FAIXAS.md`](FAIXAS.md) §3).
-- Pequena: sem QA de código separado; o QA final (fase 5, `Crivos: sim`) aplica os quatro crivos ao diff inteiro e você corrige os achados (passo abaixo). Exceção: item **contrato** cujo consumidor fica fora do plano (outro repositório, cliente já publicado, formato persistido que uma versão antiga lê) = um QA de código sobre a `impl/<slug>` (base `<principal>`; `<faixa>` = `codigo` no molde abaixo) logo depois do item, como na grande; contrato com produtor e consumidor no mesmo plano espera o QA final.
+- Large: one per lane, as soon as it delivers, before the merge ([`LANES.md`](LANES.md) §3).
+- Small: no separate code QA; the final QA (phase 5, `Gates: yes`) applies the four gates to the whole diff and you fix the findings (step below). Exception: a **contract** item whose consumer is outside the plan (another repository, an already published client, a persisted format an old version reads) = one code QA on `impl/<slug>` (base `<main>`; `<lane>` = `code` in the template below) right after the item, as in the large case; a contract with producer and consumer in the same plan waits for the final QA.
 
-Antes de disparar, grave o diff: `git diff <base>...<remote>/<branch> > <raiz>/.impl/<slug>/qa/<faixa>.diff`.
-
-```text
-PLUGIN_ROOT=${CLAUDE_PLUGIN_ROOT}
-Modo: codigo. Tarefa: <slug>. Repo: <raiz>. Perfil: <raiz>/.claude/perfil/implementation.md e _comum.md. Plano: <raiz>/.impl/<slug>/PLANO.md. Faixa: <<raiz>/.impl/<slug>/<faixa>.md | "toda">.
-Branch: <impl/<slug>-<faixa> | impl/<slug>> @ <hash>. Base do diff: <hash da base>. Remote: <remote>. Diff: <raiz>/.impl/<slug>/qa/<faixa>.diff.
-Saída: <raiz>/.impl/<slug>/qa/<faixa>.md. Retro: <raiz>/.impl/<slug>/retros/qa-<faixa>.md.
-Comandos: git = <caminho absoluto da fase 1> -C <raiz> …, um comando por chamada.
-Reteste: <"não" | ids dos achados corrigidos>.
-```
-
-`Agent(subagent_type: "wh:impl-qa", model: <perfil § Modelos; sem regra, "sonnet">, prompt: …)`, **sem `isolation`** (revisão estática: lê o diff no clone, sem reset nem índice novo) e sem `name`.
-
-Achados (tipo e severidade no arquivo do QA): **bug, padrão, nome ou teste ausente** = corrigir (um commit por achado, `QA-<faixa>-NN: …`), crítica e alta primeiro. Depois, **um** reteste por `impl-qa` só quando houve achado de código crítico, alto ou médio, cobrindo esses ids e os abertos na mesma área (um conserto pode mudar as condições do vizinho); conserto só de severidade baixa ou só de teste, você confere rodando o Aceite do item. O que volta vai para o relatório. Achado crítico ou alto consertado depois desse reteste ganha um reteste curto só do id, ou entra no `Conferir:` do prompt do QA final. **Risco não demonstrado, decisão contestada ou juízo de produto** = relatório, sem código; risco que o QA mediu ou reproduziu conta como bug. Saída ou retro que o QA devolveu na resposta (escrita recusada): grave-as você nos caminhos do prompt.
-
-**Feito quando todo achado está corrigido e retestado, ou registrado para o relatório.**
-
-## 5. QA final (a execução cara, uma vez, na ponta da `impl/<slug>`)
-
-Push da `impl/<slug>` e um `impl-qa` em modo `final`:
+Before dispatching, write the diff: `git diff <base>...<remote>/<branch> > <root>/.impl/<slug>/qa/<lane>.diff`.
 
 ```text
 PLUGIN_ROOT=${CLAUDE_PLUGIN_ROOT}
-Modo: final. Tarefa: <slug>. Repo: <raiz>. Perfil: <raiz>/.claude/perfil/implementation.md e _comum.md. Plano: <raiz>/.impl/<slug>/PLANO.md.
-Branch: impl/<slug> @ <hash>. Base do diff: <principal>. Remote: <remote>. Áreas tocadas: <features/módulos visíveis, ou "nenhuma">.
-Saída: <raiz>/.impl/<slug>/qa/final.md. Retro: <raiz>/.impl/<slug>/retros/qa-final.md.
-Comandos: perfil § Comandos na worktree antes do 1º comando; git = <caminho absoluto da fase 1> -C <worktree> …, um comando por chamada.
-Reteste: <"não" | ids dos achados corrigidos>.
-Conferir: <"—" | ids críticos ou altos da fase 4 consertados sem reteste>.
-Crivos: <sim (tarefa pequena: os quatro crivos do modo codigo sobre todo o diff) | não>.
+Mode: code. Task: <slug>. Repo: <root>. Profile: <root>/.claude/profile/implementation.md and _common.md. Plan: <root>/.impl/<slug>/PLAN.md. Lane: <<root>/.impl/<slug>/<lane>.md | "all">.
+Branch: <impl/<slug>-<lane> | impl/<slug>> @ <hash>. Diff base: <base hash>. Remote: <remote>. Diff: <root>/.impl/<slug>/qa/<lane>.diff.
+Output: <root>/.impl/<slug>/qa/<lane>.md. Retro: <root>/.impl/<slug>/retros/qa-<lane>.md.
+Commands: git = <absolute path from phase 1> -C <root> …, one command per call.
+Retest: <"no" | ids of the fixed findings>.
 ```
 
-`Agent(subagent_type: "wh:impl-qa", isolation: "worktree", model: <perfil § Modelos; sem regra, "opus">, prompt: …)`, sem `name`.
+`Agent(subagent_type: "wh:impl-qa", model: <profile § Models; no rule, "sonnet">, prompt: …)`, **without `isolation`** (static review: it reads the diff in the clone, with no reset nor new index) and without `name`.
 
-Ele roda a suíte e os checks do perfil, revisa os commits de integração e as costuras entre faixas, e roda o QA visual ou e2e do perfil nas áreas tocadas (só quando o que o usuário vê mudou). Você confere em paralelo o que é barato: build do perfil sem warning novo, lint do perfil, `git status` sem fixture recebida nem lixo.
+Findings (type and severity in the QA file): **bug, standard, name or missing test** = fix (one commit per finding, `QA-<lane>-NN: …`), critical and high first. Then **one** retest by `impl-qa` only when there was a critical, high or medium code finding, covering those ids and the open ones in the same area (a fix may change the neighbor's conditions); a fix of low severity only, or of a test only, you check by running the item's Acceptance. What comes back goes to the report. A critical or high finding fixed after that retest gets a short retest of the id only, or enters the `Verify:` of the final QA prompt. **Undemonstrated risk, contested decision or product judgment** = report, no code; a risk the QA measured or reproduced counts as a bug. Output or retro the QA returned in its answer (write refused): you write them to the paths from the prompt.
 
-Achados: a mesma triagem da fase 4, reteste incluído; bug em muitas áreas vira uma faixa `impl-dev` de FIX (`FAIXAS.md` §2–3). Depois dos consertos, **um** reteste (`Reteste: <ids>`); o que volta vai para o relatório. Cota de API perto do fim: reteste só dos achados críticos e altos, e QA visual/e2e só nas áreas de item contrato.
+**Done when every finding is fixed and retested, or recorded for the report.**
 
-**Feito quando a suíte e os checks do perfil estão verdes na ponta da `impl/<slug>` e todo achado está corrigido e retestado, ou registrado para o relatório.**
+## 5. Final QA (the expensive run, once, at the tip of `impl/<slug>`)
 
-## 6. Fechar
+Push `impl/<slug>` and one `impl-qa` in mode `final`:
 
-1. **Retros:** mande ao enriquecedor "Etapa: retro. Arquivo: <raiz>/.impl/<slug>/retros/enriquecedor.md". **Sua retro:** `Skill(wh:retro, "arquivo: <raiz>/.impl/<slug>/retros/orquestrador.md")` sobre esta sessão, no formato de [`RELATORIO.md`](RELATORIO.md).
-2. **Relatório:** junte as retros e escreva o relatório no caminho do perfil § Relatório por [`RELATORIO.md`](RELATORIO.md); commit `docs: relatório <slug>`. Candidato de qualquer severidade cuja proposta é uma linha de `.claude/perfil/*.md` (ex.: § Comandos na worktree, § Testes): aplique no mesmo commit e marque "aplicado" na retro consolidada (o perfil é do repo; o dono revisa a linha no PR). `CLAUDE.md`, docs de regras e tudo o mais: só o dono (pergunta na resposta final). Print que prova um bug ainda aberto: copie de `<raiz>/.impl/<slug>/qa/visual/` para uma pasta `<data>-<slug>/` ao lado do relatório, antes de a limpeza apagar `.impl/`.
-3. **Docs de fim** (perfil § Docs de fim: changelog, mapa de features, pendências, glossário, convenções), commit `docs: <slug>`, com as "notas para os docs" dos relatórios das faixas à mão. Pendência aberta (dívida, decisão do dono, convenção nova, termo novo) vai para o doc que o perfil nomeia; sem doc para ela, fica no relatório.
-4. **Limpeza:** `Skill(wh:limpeza, "<slug>")` quando `.claude/perfil/limpeza.md` existe (executados, pendências, `.md` que citam código mudado, worktrees); sem ele, o mínimo inline: apague `<raiz>/.impl/<slug>/` (já consolidado no relatório) e qualquer `.md` de plano ou prompt que a tarefa criou dentro do repo; `.md` do repo que cita código que mudou (nome, caminho, rota) é atualizado; `git worktree remove` das worktrees da tarefa que ainda existem (`git worktree list --porcelain`): as de branch `impl/<slug>-*` e as de agente (`worktree-agent-*`) cujo HEAD é um commit de `<principal>..impl/<slug>`; depois `git branch -D` dessas `worktree-agent-*` (as `impl/<slug>-*` ficam no remote até o PR). Worktree de outra sessão fica.
-5. **Push e PR:** `git push -u <remote> impl/<slug>`; `gh pr create --base <principal> --head impl/<slug>`, corpo = resumo do relatório (≤ 20 linhas) + link do arquivo + o rodapé de atribuição. Modo sem PR (fase 1): só o push; o relatório e a resposta trazem o comando de merge (`git switch <principal> && git merge --no-ff impl/<slug> && git push <remote> <principal>`).
-6. **Resposta ao dono** (≤ 10 linhas): link do PR (ou a branch e o comando de merge), itens fechados, pendências que só ele resolve (com as decisões tomadas sem o dono), caminho do relatório; com PR, o comando `/code-review ultra <n do PR>` pronto para colar; sem PR, não cite o `ultra` em forma nenhuma.
+```text
+PLUGIN_ROOT=${CLAUDE_PLUGIN_ROOT}
+Mode: final. Task: <slug>. Repo: <root>. Profile: <root>/.claude/profile/implementation.md and _common.md. Plan: <root>/.impl/<slug>/PLAN.md.
+Branch: impl/<slug> @ <hash>. Diff base: <main>. Remote: <remote>. Touched areas: <visible features/modules, or "none">.
+Output: <root>/.impl/<slug>/qa/final.md. Retro: <root>/.impl/<slug>/retros/qa-final.md.
+Commands: profile § Worktree commands before the 1st command; git = <absolute path from phase 1> -C <worktree> …, one command per call.
+Retest: <"no" | ids of the fixed findings>.
+Verify: <"—" | critical or high ids of phase 4 fixed without retest>.
+Gates: <yes (small task: the four gates of mode code over the whole diff) | no>.
+```
 
-**Feito quando o PR está aberto (sem PR: a branch está no remote) e o dono recebeu o link ou o comando de merge.**
+`Agent(subagent_type: "wh:impl-qa", isolation: "worktree", model: <profile § Models; no rule, "opus">, prompt: …)`, without `name`.
+
+It runs the profile's suite and checks, reviews the integration commits and the seams between lanes, and runs the profile's visual or e2e QA on the touched areas (only when what the user sees changed). In parallel you check what is cheap: the profile's build with no new warning, the profile's lint, `git status` with no received fixture nor junk.
+
+Findings: the same triage as phase 4, retest included; a bug across many areas becomes a FIX `impl-dev` lane (`LANES.md` §2–3). After the fixes, **one** retest (`Retest: <ids>`); what comes back goes to the report. API quota near its end: retest only the critical and high findings, and visual/e2e QA only on the areas of contract items.
+
+**Done when the profile's suite and checks are green at the tip of `impl/<slug>` and every finding is fixed and retested, or recorded for the report.**
+
+## 6. Close
+
+1. **Retros:** send the enricher "Stage: retro. File: <root>/.impl/<slug>/retros/enricher.md". **Your retro:** `Skill(wh:retro, "file: <root>/.impl/<slug>/retros/orchestrator.md")` about this session, in the format of [`REPORT.md`](REPORT.md).
+2. **Report:** gather the retros and write the report to the path of profile § Report by [`REPORT.md`](REPORT.md); commit `docs: report <slug>`. A candidate of any severity whose proposal is one line of `.claude/profile/*.md` (e.g. § Worktree commands, § Tests): apply it in the same commit and mark "applied" in the consolidated retro (the profile belongs to the repo; the owner reviews the line in the PR). `CLAUDE.md`, rule docs and everything else: the owner only (question in the final answer). A screenshot that proves a still-open bug: copy it from `<root>/.impl/<slug>/qa/visual/` to a folder `<date>-<slug>/` beside the report, before the cleanup deletes `.impl/`.
+3. **Closing docs** (profile § Closing docs: changelog, feature map, open items, glossary, conventions), commit `docs: <slug>`, with the "notes for the docs" from the lane reports at hand. An open item (debt, owner decision, new convention, new term) goes to the doc the profile names; with no doc for it, it stays in the report.
+4. **Cleanup:** `Skill(wh:cleanup, "<slug>")` when `.claude/profile/cleanup.md` exists (executed files, open items, `.md` files that cite changed code, worktrees); without it, the minimum inline: delete `<root>/.impl/<slug>/` (already consolidated in the report) and any plan or prompt `.md` the task created inside the repo; a repo `.md` that cites changed code (name, path, route) is updated; `git worktree remove` of the task's worktrees that still exist (`git worktree list --porcelain`): those on branch `impl/<slug>-*` and the agent ones (`worktree-agent-*`) whose HEAD is a commit of `<main>..impl/<slug>`; then `git branch -D` of those `worktree-agent-*` (the `impl/<slug>-*` ones stay on the remote until the PR). Another session's worktree stays.
+5. **Push and PR:** `git push -u <remote> impl/<slug>`; `gh pr create --base <main> --head impl/<slug>`, body = summary of the report (≤ 20 lines) + link to the file + the attribution footer. No-PR mode (phase 1): push only; the report and the answer carry the merge command (`git switch <main> && git merge --no-ff impl/<slug> && git push <remote> <main>`).
+6. **Answer to the owner** (≤ 10 lines): PR link (or the branch and the merge command), closed items, open items only they resolve (with the decisions taken without the owner), report path; with a PR, the command `/code-review ultra <PR number>` ready to paste; without a PR, do not mention `ultra` in any form.
+
+**Done when the PR is open (no PR: the branch is on the remote) and the owner received the link or the merge command.**

@@ -1,76 +1,76 @@
 ---
 name: brainstorm
-description: Ideias de produto/design para o repositório atual, ancoradas no estado e no roadmap, numa nota rascunho fora do git.
+description: Product/design ideas for the current repository, anchored in its state and roadmap, in a draft note outside git.
 disable-model-invocation: true
 ---
 
 # Brainstorm
 
-Perfil do projeto (injetado; `PERFIL_AUSENTE` = `Skill(wh:perfil, "brainstorm")` e depois `Read` dos dois arquivos, porque a injeção abaixo rodou antes de o perfil existir):
-!`cat .claude/perfil/_comum.md .claude/perfil/brainstorm.md 2>/dev/null || echo PERFIL_AUSENTE`
+Project profile (injected; `PROFILE_MISSING` = `Skill(wh:profile, "brainstorm")` and then `Read` both files, because the injection below ran before the profile existed):
+!`cat .claude/profile/_common.md .claude/profile/brainstorm.md 2>/dev/null || echo PROFILE_MISSING`
 
-Saída: uma nota rascunho com ideias para o dono decidir, em PT-BR, não código. Código, status de features e `docs/` ficam como estão. Promover uma ideia a trabalho é outro passo (o dono decide; depois o doc de status e `/wh:feature-docs`).
+Output: a draft note with ideas for the owner to decide on, in the language of the repo's docs, not code. Code, feature status and `docs/` stay as they are. Promoting an idea to work is another step (the owner decides; then the status doc and `/wh:feature-docs`).
 
-## 1. Enquadrar
+## 1. Frame
 
-Do pedido: **tema** (feature, tensão, fase ou "aberto"), **horizonte** (próximo passo / próxima fase / longo prazo) e restrições dadas (esforço, plataforma, monetização). Sem tema: os itens abertos do roadmap (passo 2). Pergunte só se o tema oscila entre duas áreas muito diferentes; senão declare a premissa na resposta e siga.
+From the request: **topic** (feature, tension, phase or "open"), **horizon** (next step / next phase / long term) and given constraints (effort, platform, monetization). No topic: the open items of the roadmap (step 2). Ask only if the topic wavers between two very different areas; otherwise state the premise in the answer and go on.
 
-## 2. Orientar
+## 2. Orient
 
-Leia na ordem da tabela do perfil § Fontes e pare quando entender a área: títulos primeiro (`grep -n '^#' <arquivo>`), depois só as seções que importam. Orçamento: 6–10 leituras antes de gerar. Docs de regras técnicas (`_comum § Docs`): uma vez, só quando uma ideia depende de uma regra de código. Para saber se algo já existe: `_comum § Navegação` pelo nome, nunca serviço inteiro "para ter contexto". O que o dono disse nesta conversa sobre o futuro vale mais que os docs; diga quando divergem.
+Read in the order of the table in profile § Sources and stop when you understand the area: headings first (`grep -n '^#' <file>`), then only the sections that matter. Budget: 6–10 reads before generating. Technical rule docs (`_common § Docs`): once, only when an idea depends on a code rule. To know whether something already exists: `_common § Navigation` by name, never a whole service "for context". What the owner said in this conversation about the future outranks the docs; say when they diverge.
 
-**Feito quando você sabe o que existe, o que está planejado e quais decisões já foram tomadas no tema.**
+**Done when you know what exists, what is planned and which decisions were already taken on the topic.**
 
-## 3. Divergir
+## 3. Diverge
 
-12–20 ideias cruas antes de julgar qualquer uma, girando as lentes do perfil § Lentes para não virem todas do mesmo ângulo.
+12–20 raw ideas before judging any, rotating the lenses of profile § Lenses so they do not all come from the same angle.
 
-## 4. Convergir
+## 4. Converge
 
-Fora ou reformulada a ideia que quebra uma restrição do perfil § Restrições; duplicatas fundidas; ficam 5–8. Já existe (passo 2)? Em parte = extensão daquela feature, não feature nova.
+Out, or reworked, the idea that breaks a constraint of profile § Constraints; duplicates merged; 5–8 remain. Already exists (step 2)? Partly = an extension of that feature, not a new feature.
 
-## 5. Escrever a nota
+## 5. Write the note
 
-Pasta, nome e formato de link: perfil § Nota. Mesmo tema no mesmo dia = atualize a nota existente.
+Folder, name and link format: profile § Note. Same topic on the same day = update the existing note.
 
 ```markdown
 ---
-tags: [brainstorm, rascunho]
-status: rascunho
-data: AAAA-MM-DD
-tema: <tema>
-horizonte: <próximo passo | próxima fase | longo prazo>
-fontes: [<as que você leu, no formato de link do perfil>]
+tags: [brainstorm, draft]
+status: draft
+date: YYYY-MM-DD
+topic: <topic>
+horizon: <next step | next phase | long term>
+sources: [<the ones you read, in the profile's link format>]
 ---
 
-# Brainstorm — <tema>
+# Brainstorm — <topic>
 
-<Uma linha: tema, horizonte, premissas (e onde o que o dono disse diverge dos docs).>
+<One line: topic, horizon, premises (and where what the owner said diverges from the docs).>
 
-## Ideias
+## Ideas
 
-### <n>. <Nome curto> — <pitch em uma frase, do ponto de vista do usuário>
-- **Por quê:** <pilar, tensão ou id que resolve, com link>
-- **Como encaixa:** <features tocadas, com link; o que entra e sai; o que o sistema precisa derivar>
-- **Esforço:** P/M/G — <camadas tocadas>
-- **Riscos / perguntas:** <balanceamento, escala, decisão do dono, informação faltante>
-- **Primeiro passo:** <o menor experimento que valida a ideia>
+### <n>. <Short name> — <one-sentence pitch, from the user's point of view>
+- **Why:** <pillar, tension or id it resolves, with link>
+- **How it fits:** <features touched, with link; what goes in and out; what the system has to derive>
+- **Effort:** S/M/L — <layers touched>
+- **Risks / questions:** <balancing, scale, owner decision, missing information>
+- **First step:** <the smallest experiment that validates the idea>
 
-## Priorização
-<tabela: ideia × impacto × esforço × dependências, na ordem da sua recomendação>
+## Prioritization
+<table: idea × impact × effort × dependencies, in the order of your recommendation>
 
-## Recomendação
-<as 1–2 ideias para fazer primeiro e por quê, um parágrafo curto>
+## Recommendation
+<the 1–2 ideas to do first and why, one short paragraph>
 
-## Decisões para o dono
-- [ ] <pergunta que só o dono responde> — destrava <ideias>
+## Decisions for the owner
+- [ ] <question only the owner answers> — unblocks <ideas>
 
-## Descartadas
-- <ideia> — <restrição do passo 4 que ela quebra> (uma linha cada)
+## Discarded
+- <idea> — <constraint from step 4 that it breaks> (one line each)
 ```
 
-O que você inferiu sem olhar o código leva *(a verificar)*.
+What you inferred without looking at the code gets *(to verify)*.
 
-## 6. Relatar
+## 6. Report
 
-No chat: caminho da nota, a recomendação em duas ou três linhas e as decisões abertas. Confirme que está fora do git (`git check-ignore -v <arquivo>`).
+In the chat: path of the note, the recommendation in two or three lines and the open decisions. Confirm it is outside git (`git check-ignore -v <file>`).

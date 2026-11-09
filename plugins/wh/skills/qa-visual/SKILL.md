@@ -1,79 +1,79 @@
 ---
 name: qa-visual
-description: QA visual e funcional do cliente contra um serviço local isolado: dirige o produto, lê prints e escreve relatório de bugs com evidência. Nunca corrige. Use para "rodar QA", "testar visualmente".
+description: Visual and functional QA of the client against an isolated local service: drives the product, reads screenshots and writes a bug report with evidence. Never fixes. Use for "run QA", "test visually".
 ---
 
-# QA visual e funcional
+# Visual and functional QA
 
-Perfil do projeto (injetado; `PERFIL_AUSENTE` = `Skill(wh:perfil, "qa-visual")` e depois `Read` dos dois arquivos, porque a injeção abaixo rodou antes de o perfil existir):
-!`cat .claude/perfil/_comum.md .claude/perfil/qa-visual.md 2>/dev/null || echo PERFIL_AUSENTE`
+Project profile (injected; `PROFILE_MISSING` = `Skill(wh:profile, "qa-visual")` and then `Read` both files, because the injection below ran before the profile existed):
+!`cat .claude/profile/_common.md .claude/profile/qa-visual.md 2>/dev/null || echo PROFILE_MISSING`
 
-Rode o produto de verdade, exercite as features, tire prints, **olhe cada print** e entregue um relatório de bugs com evidência. **Nada é corrigido**: só encontrado, reproduzido, evidenciado e documentado.
+Run the real product, exercise the features, take screenshots, **look at every screenshot** and deliver a bug report with evidence. **Nothing is fixed**: only found, reproduced, evidenced and documented.
 
-## Entrada
+## Input
 
-`/wh:qa-visual [features…] [--res=WxH,…] [--lang=a,b] [--autonomo]`
+`/wh:qa-visual [features…] [--res=WxH,…] [--lang=a,b] [--autonomous]`
 
-| Argumento | Padrão | Significado |
+| Argument | Default | Meaning |
 |---|---|---|
-| `features` | todas as dadas como feitas no doc de status | nomes dos arquivos do mapa de features sem `.md` |
-| `--res` | perfil § Entrada | resoluções (o retrato tem layout próprio) |
-| `--lang` | perfil § Entrada | idiomas |
-| `--autonomo` | ligado sem dono para responder (subagente) | o checkpoint (seção 6) vai para o relatório em vez de parar |
+| `features` | all the ones the status doc marks as done | names of the feature map files without `.md` |
+| `--res` | profile § Input | resolutions (portrait has its own layout) |
+| `--lang` | profile § Input | languages |
+| `--autonomous` | on when there is no owner to answer (subagent) | the checkpoint (section 6) goes to the report instead of stopping |
 
-## Saída
+## Output
 
-Tudo em `<raiz>/qa/` (`<raiz>` = checkout testado: repositório ou worktree; já gitignored). Rodada longa: prefira uma worktree como `<raiz>` (outra sessão pode trocar a branch do checkout principal no meio). Layout de prints, logs, dados e cenários: perfil § Saída. Os cenários da rodada sobrevivem ao teardown na pasta que o perfil nomeia; o setup seguinte os reinstala (reteste).
+Everything in `<root>/qa/` (`<root>` = the tested checkout: repository or worktree; already gitignored). Long round: prefer a worktree as `<root>` (another session may switch the main checkout's branch midway). Layout of screenshots, logs, data and scenarios: profile § Output. The round's scenarios survive the teardown in the folder the profile names; the next setup reinstalls them (retest).
 
-## 0. Contexto
+## 0. Context
 
-Os docs do perfil § Contexto (regras de camada, mapa de features, status): deles saem os critérios de "correto". Sem mockup, a UI se julga pelas regras desses docs, pela doc da feature e pela consistência entre telas. Status diz o que existe: o que ele não dá como feito não se testa; pendências conhecidas não viram bug novo. Código: `_comum § Navegação`; sem o índice, causa no backend vira hipótese.
+The docs of profile § Context (layer rules, feature map, status): the criteria for "correct" come from them. Without a mockup, the UI is judged by the rules in those docs, by the feature doc and by consistency across screens. Status says what exists: what it does not mark as done is not tested; known open items do not become new bugs. Code: `_common § Navigation`; without the index, a backend cause becomes a hypothesis.
 
-## 1. Preparação
+## 1. Preparation
 
-1. Mapa de features (índice + arquivos do escopo) e doc de status: monte a **checklist** (perfil § Checklist diz como ler os prints e o que não é bug): por feature, comportamentos esperados com os números concretos (tempos, limites, preços, capacidades), como verificar **na tela** e **no backend**, status, e o que exige nível, moeda ou espera longa.
-2. Args de debug do cliente (perfil § Ambiente: onde está a lista canônica; variam por branch).
-3. Setup do harness (perfil § Harness). Anote os valores de configuração que ele imprime: mudam fluxos.
-4. Serviço do QA (perfil § Harness), na porta do `_comum § Portas`; confirme com uma chamada real.
-5. Smoke: o cenário de fumaça do perfil § Harness. Abra o print e descreva-o. Erro de script aqui já é bug.
+1. Feature map (index + files in scope) and status doc: build the **checklist** (profile § Checklist says how to read the screenshots and what is not a bug): per feature, expected behaviors with concrete numbers (timings, limits, prices, capacities), how to verify **on screen** and **in the backend**, status, and what requires level, currency or a long wait.
+2. Client debug args (profile § Environment: where the canonical list is; they vary per branch).
+3. Harness setup (profile § Harness). Note the configuration values it prints: they change flows.
+4. QA service (profile § Harness), on the `_common § Ports` port; confirm with a real call.
+5. Smoke: the smoke scenario of profile § Harness. Open the screenshot and describe it. A script error here is already a bug.
 
-**Feito quando a checklist existe, o serviço responde e o print do smoke foi lido.**
+**Done when the checklist exists, the service responds and the smoke screenshot was read.**
 
-## 2. Como testar
+## 2. How to test
 
-- Cenário: ops, scripts e armadilhas no doc do harness (perfil § Harness).
-- **Ação testada sempre pela UI**, com input real. Consulta só-leitura para achar coordenadas é permitida.
-- **Fixtures** (perfil § Fixtures): montar o estado de partida pela API local é permitido; o relatório registra qual cenário usou qual. O que ainda exige recurso sem caminho pela UI vira "Bloqueada (precisa de X)".
-- **Usuário limpo por cenário** (o harness cria um por padrão); o mesmo id para encadear cenários.
-- **Espere de verdade**: ops de espera por texto/estado; `sleep` só para animações.
-- **Armadilhas conhecidas**: perfil § Armadilhas, antes de culpar o produto.
-- **Tempo**: perfil § Tempos (ação mais curta, folga de espera); espera inviável = item "Parcial".
-- **Backend**: estado antes e depois de todo passo que muda estado, comparado com a tela.
+- Scenario: ops, scripts and pitfalls in the harness doc (profile § Harness).
+- **Action always tested through the UI**, with real input. Read-only queries to find coordinates are allowed.
+- **Fixtures** (profile § Fixtures): building the starting state through the local API is allowed; the report records which scenario used which. What still requires a resource with no UI path becomes "Blocked (needs X)".
+- **Clean user per scenario** (the harness creates one by default); the same id to chain scenarios.
+- **Really wait**: wait ops by text/state; `sleep` only for animations.
+- **Known pitfalls**: profile § Pitfalls, before blaming the product.
+- **Time**: profile § Timings (shortest action, wait slack); an unfeasible wait = "Partial" item.
+- **Backend**: state before and after every state-changing step, compared with the screen.
 
-## 4. Regras
+## 4. Rules
 
-- Uma feature por vez; só avance com ela documentada no relatório.
-- Todo bug reproduzido **pelo menos 2 vezes**; "reproduzido N/M".
-- Todo bug tem print e/ou trecho de log. Sem evidência, não entra.
-- Bug, não implementada e intencional são coisas diferentes. Não testável = "Bloqueada" com motivo; nada pulado em silêncio.
-- Um bug por causa: sintomas da mesma raiz agrupados.
-- Escrita só em `<raiz>/qa/` e nas pastas que o perfil § Saída lista (mais o estado do usuário local, que o teardown restaura). Código, projeto, catálogos e snapshots ficam como estão. **Sem commit.**
-- `_comum § Limites`: produção e MCPs reais nunca. Processo que não foi a skill que subiu fica vivo.
-- No fim, **sempre** o teardown do perfil § Harness (mesmo com a rodada quebrada no meio), e `git status` só com o que já estava antes.
+- One feature at a time; move on only with it documented in the report.
+- Every bug reproduced **at least 2 times**; "reproduced N/M".
+- Every bug has a screenshot and/or a log excerpt. No evidence, no entry.
+- Bug, not implemented and intentional are different things. Not testable = "Blocked" with a reason; nothing skipped silently.
+- One bug per cause: symptoms of the same root grouped.
+- Writes only in `<root>/qa/` and the folders profile § Output lists (plus the local user state, which the teardown restores). Code, project, catalogs and snapshots stay as they are. **No commit.**
+- `_common § Limits`: production and real MCPs never. A process the skill did not start stays alive.
+- At the end, **always** the teardown of profile § Harness (even with the round broken midway), and `git status` with only what was there before.
 
-## 5. Relatório (`qa/RELATORIO_QA.md`)
+## 5. Report (`qa/QA_REPORT.md`)
 
-1. **Ambiente**: commit/branch, versão do cliente/engine, porta, resoluções, idiomas, data, configuração relevante.
-2. **Resumo**: feature × status (OK / Com bugs / Parcial / Bloqueada / Não implementada) × bugs por severidade, mais o que foi verificado e funcionou (com os números medidos).
-3. **Bugs** (BUG-001…), por severidade: feature, categoria (Asset / Mapa / UI / UX / Sistêmico), severidade (Crítico: trava ou impede usar; Alto: feature não funciona; Médio: funciona com defeito; Baixo: cosmético), resolução e idioma, passos (comando exato, id, fixture), esperado (citando a doc ou a regra) vs. obtido, reprodução N/M, evidência (print e/ou trecho curto de log), causa provável marcada como hipótese.
-4. **Assets faltando** (placeholders conhecidos à parte).
-5. **Não testados / parciais** e por quê.
-6. **Top 5 correções**, em ordem, com o motivo.
-7. **Reteste**: o comando de cada bug e onde estão os cenários.
-8. **Melhorias para o harness**: ops que faltaram, suspeitas falsas recorrentes, armadilhas novas (candidatas ao perfil § Armadilhas).
+1. **Environment**: commit/branch, client/engine version, port, resolutions, languages, date, relevant configuration.
+2. **Summary**: feature × status (OK / With bugs / Partial / Blocked / Not implemented) × bugs per severity, plus what was verified and worked (with the measured numbers).
+3. **Bugs** (BUG-001…), by severity: feature, category (Asset / Map / UI / UX / Systemic), severity (Critical: freezes or prevents use; High: feature does not work; Medium: works with a defect; Low: cosmetic), resolution and language, steps (exact command, id, fixture), expected (citing the doc or the rule) vs. observed, reproduction N/M, evidence (screenshot and/or short log excerpt), probable cause marked as a hypothesis.
+4. **Missing assets** (known placeholders apart).
+5. **Not tested / partial** and why.
+6. **Top 5 fixes**, in order, with the reason.
+7. **Retest**: the command for each bug and where the scenarios are.
+8. **Harness improvements**: ops that were missing, recurring false suspicions, new pitfalls (candidates for profile § Pitfalls).
 
-O que precisa sobreviver à rodada vira linha no doc de pendências do perfil § Pendências (nenhum arquivo de pendências novo); plano de correção é temporário.
+What has to survive the round becomes a line in the open-items doc of profile § Open items (no new open-items file); a fix plan is temporary.
 
 ## 6. Checkpoint
 
-Antes de testar as features: a checklist (seção 1), o plano dos cenários (arquivos, fixtures, ids encadeados) e o smoke (serviço respondendo e um print real, aberto e descrito). Interativo: mostre e aguarde o OK. `--autonomo`: numa seção do relatório, e siga.
+Before testing the features: the checklist (section 1), the scenario plan (files, fixtures, chained ids) and the smoke (service responding and a real screenshot, opened and described). Interactive: show and wait for the OK. `--autonomous`: in a section of the report, and go on.

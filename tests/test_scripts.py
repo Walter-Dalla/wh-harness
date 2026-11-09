@@ -1,4 +1,4 @@
-"""Tests for escopo.sh and preflight.sh against a temporary git repository.
+"""Tests for scope.sh and preflight.sh against a temporary git repository.
 
     python3 -m unittest discover -s tests
 """
@@ -10,17 +10,17 @@ import unittest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCRIPTS = os.path.join(ROOT, 'plugins', 'wh', 'skills', 'implementation', 'scripts')
-ESCOPO = os.path.join(SCRIPTS, 'escopo.sh')
+SCOPE = os.path.join(SCRIPTS, 'scope.sh')
 PREFLIGHT = os.path.join(SCRIPTS, 'preflight.sh')
 GIT_ENV = dict(os.environ, GIT_AUTHOR_NAME='t', GIT_AUTHOR_EMAIL='t@t', GIT_COMMITTER_NAME='t',
                GIT_COMMITTER_EMAIL='t@t', HOME=tempfile.gettempdir())
 
-LANE = """# f1 · demo · onda W1 · porta — · ~100k tokens estimados
-Contexto: x.
-Dono de: `src/*` (símbolos à parte). Pode tocar o mínimo de: `other/*`. União: `union/*`.
-Par: —.
-## demo-1 · item · interno
-Texto do item que cita `lixo.cs` e Pode tocar `qualquer/coisa` sem contar.
+LANE = """# f1 · demo · wave W1 · port — · ~100k tokens estimated
+Context: x.
+Owns: `src/*` (symbols apart). May touch the minimum of: `other/*`. Union: `union/*`.
+Pair: —.
+## demo-1 · item · internal
+Item text that cites `lixo.cs` and May touch `qualquer/coisa` without counting.
 """
 
 
@@ -46,7 +46,7 @@ class ScriptsTest(unittest.TestCase):
         shutil.rmtree(self.tmp)
 
     def lane(self, text=LANE):
-        path = os.path.join(self.tmp, 'faixa.md')  # fora do repo, como .impl/ (excluído do git)
+        path = os.path.join(self.tmp, 'faixa.md')  # outside the repo, like .impl/ (excluded from git)
         with open(path, 'w', encoding='utf-8') as fh:
             fh.write(text)
         return path
@@ -61,32 +61,32 @@ class ScriptsTest(unittest.TestCase):
         git(self.repo, 'add', '-A')
         git(self.repo, 'commit', '-q', '-m', msg)
 
-    # ---- escopo.sh
+    # ---- scope.sh
 
-    def test_escopo_separates_owned_touchable_union_and_outside(self):
+    def test_scope_separates_owned_touchable_union_and_outside(self):
         for f in ('src/a.cs', 'other/b.cs', 'union/c.txt', 'lixo.cs'):
             self.write(f)
         self.commit_all()
-        code, out = run(ESCOPO, self.repo, self.lane(), self.base)
+        code, out = run(SCOPE, self.repo, self.lane(), self.base)
         self.assertEqual(code, 1)
-        self.assertIn('FORA: lixo.cs', out)
-        self.assertIn('AVISO esperado: other/b.cs', out)
-        self.assertNotIn('FORA: other/b.cs', out)
+        self.assertIn('OUTSIDE: lixo.cs', out)
+        self.assertIn('WARNING expected: other/b.cs', out)
+        self.assertNotIn('OUTSIDE: other/b.cs', out)
         self.assertNotIn('union/c.txt', out)
         self.assertNotIn('src/a.cs', out)
 
-    def test_escopo_ok_when_everything_is_owned(self):
+    def test_scope_ok_when_everything_is_owned(self):
         self.write('src/a.cs')
         self.write('src/deep/b.cs')
         self.commit_all()
-        code, out = run(ESCOPO, self.repo, self.lane(), self.base)
+        code, out = run(SCOPE, self.repo, self.lane(), self.base)
         self.assertEqual(code, 0, out)
-        self.assertIn('ESCOPO OK: 2 arquivos', out)
+        self.assertIn('SCOPE OK: 2 files', out)
 
-    def test_escopo_fails_without_owned_paths(self):
-        code, out = run(ESCOPO, self.repo, self.lane('# f\nDono de: nada entre crases\n'), self.base)
+    def test_scope_fails_without_owned_paths(self):
+        code, out = run(SCOPE, self.repo, self.lane('# f\nOwns: nothing in backticks\n'), self.base)
         self.assertEqual(code, 2)
-        self.assertIn('ESCOPO FALHOU', out)
+        self.assertIn('SCOPE FAILED', out)
 
     # ---- preflight.sh
 
@@ -98,12 +98,12 @@ class ScriptsTest(unittest.TestCase):
         self.exclude_progress()
         code, out = run(PREFLIGHT, self.repo, '--base', self.base)
         self.assertEqual(code, 1)
-        self.assertIn('checkout principal', out)
+        self.assertIn('main checkout', out)
 
     def test_preflight_ok_in_a_fresh_agent_worktree(self):
         self.exclude_progress()
         self.write('.impl/demo/faixa.md', LANE)
-        self.write('.impl/demo/QUADRO.md', '')
+        self.write('.impl/demo/BOARD.md', '')
         wt = os.path.join(self.tmp, 'wt')
         git(self.repo, 'worktree', 'add', '-q', '-b', 'worktree-agent-abc', wt, 'main')
         code, out = run(PREFLIGHT, wt, '--base', self.base, '--branch', 'impl/demo-f1',
@@ -117,7 +117,7 @@ class ScriptsTest(unittest.TestCase):
         git(self.repo, 'worktree', 'add', '-q', '-b', 'agent-xyz', wt, 'main')
         code, out = run(PREFLIGHT, wt, '--base', self.base)
         self.assertEqual(code, 1)
-        self.assertIn("não é worktree-agent-*", out)
+        self.assertIn("is not worktree-agent-*", out)
         code, out = run(PREFLIGHT, wt, '--base', self.base, WH_AGENT_BRANCH_PREFIX='agent-')
         self.assertEqual(code, 0, out)
 
@@ -129,8 +129,8 @@ class ScriptsTest(unittest.TestCase):
         code, out = run(PREFLIGHT, wt, '--base', 'deadbeef', '--branch', 'main',
                         '--lane', os.path.join(self.tmp, 'nao-existe.md'))
         self.assertEqual(code, 1)
-        for msg in ('protegida: main', 'alterações locais', 'base deadbeef não existe', 'faixa ilegível',
-                    '.impl/ não é ignorado'):
+        for msg in ('protected: main', 'local changes', 'base deadbeef does not exist', 'lane file unreadable',
+                    '.impl/ is not ignored'):
             self.assertIn(msg, out)
 
     def agent_worktree(self, name='wt', branch='worktree-agent-abc'):
@@ -147,12 +147,12 @@ class ScriptsTest(unittest.TestCase):
     def test_preflight_reports_an_option_without_value(self):
         code, out = run(PREFLIGHT, self.repo, '--base')
         self.assertEqual(code, 2)
-        self.assertIn('PREFLIGHT FALHOU: --base sem valor', out)
+        self.assertIn('PREFLIGHT FAILED: --base without a value', out)
 
     def test_preflight_outside_a_git_repository(self):
         code, out = run(PREFLIGHT, self.tmp, '--base', self.base, GIT_CEILING_DIRECTORIES=os.path.dirname(self.tmp))
         self.assertEqual(code, 1)
-        self.assertIn('fora de um repositório git', out)
+        self.assertIn('outside a git repository', out)
 
     def test_preflight_port_dash_is_skipped_and_busy_port_fails(self):
         import socket
@@ -160,20 +160,20 @@ class ScriptsTest(unittest.TestCase):
         wt = self.agent_worktree()
         code, out = run(PREFLIGHT, wt, '--base', self.base, '--port', '—')
         self.assertEqual(code, 0, out)
-        self.assertNotIn('ocupada', out)
+        self.assertNotIn('busy', out)
         with socket.socket() as srv:
             srv.bind(('127.0.0.1', 0))
             srv.listen(1)
             port = str(srv.getsockname()[1])
             code, out = run(PREFLIGHT, wt, '--base', self.base, '--port', port)
-        if 'PREFLIGHT AVISO' in out:  # máquina sem ss nem lsof
+        if 'PREFLIGHT WARNING' in out:  # machine without ss or lsof
             self.assertEqual(code, 0, out)
         else:
             self.assertEqual(code, 1, out)
-            self.assertIn('porta %s ocupada' % port, out)
+            self.assertIn('port %s busy' % port, out)
 
     def test_continuation_agent_takes_the_lane_branch_after_the_old_worktree_is_released(self):
-        """FAIXAS.md §3.9: a worktree antiga segura a branch; liberada, o agente novo passa no preflight e a renomeia."""
+        """LANES.md §3.9: the old worktree holds the branch; once freed, the new agent passes the preflight and renames it."""
         self.exclude_progress()
         old = self.agent_worktree('old', 'worktree-agent-old')
         git(old, 'branch', '-m', 'impl/demo-f1')
@@ -187,29 +187,29 @@ class ScriptsTest(unittest.TestCase):
         git(new, 'branch', '-m', 'impl/demo-f1')
         self.assertEqual(git(new, 'branch', '--show-current'), 'impl/demo-f1')
 
-    # ---- escopo.sh: caminhos difíceis
+    # ---- scope.sh: hard paths
 
-    def test_escopo_accepts_glob_characters_non_ascii_and_spaces(self):
-        lane = self.lane('# f\nDono de: `app/[id]/page.tsx` `docs/revisão.md` `com espaço/*`. União: —.\n## i\n')
+    def test_scope_accepts_glob_characters_non_ascii_and_spaces(self):
+        lane = self.lane('# f\nOwns: `app/[id]/page.tsx` `docs/revisão.md` `com espaço/*`. Union: —.\n## i\n')
         for f in ('app/[id]/page.tsx', 'docs/revisão.md', 'com espaço/a b.txt'):
             self.write(f)
         self.commit_all()
-        code, out = run(ESCOPO, self.repo, lane, self.base)
+        code, out = run(SCOPE, self.repo, lane, self.base)
         self.assertEqual(code, 0, out)
-        self.assertIn('ESCOPO OK: 3 arquivos', out)
+        self.assertIn('SCOPE OK: 3 files', out)
         self.write('fora.txt')
         self.commit_all()
-        code, out = run(ESCOPO, self.repo, lane, self.base)
+        code, out = run(SCOPE, self.repo, lane, self.base)
         self.assertEqual(code, 1)
-        self.assertIn('FORA: fora.txt', out)
+        self.assertIn('OUTSIDE: fora.txt', out)
 
-    def test_escopo_without_union_or_touchable_lines(self):
+    def test_scope_without_union_or_touchable_lines(self):
         self.write('src/a.cs')
         self.write('union/c.txt')
         self.commit_all()
-        code, out = run(ESCOPO, self.repo, self.lane('# f\nDono de: `src/*`.\n## i\n'), self.base)
+        code, out = run(SCOPE, self.repo, self.lane('# f\nOwns: `src/*`.\n## i\n'), self.base)
         self.assertEqual(code, 1)
-        self.assertIn('FORA: union/c.txt', out)
+        self.assertIn('OUTSIDE: union/c.txt', out)
         self.assertNotIn('src/a.cs', out)
 
 

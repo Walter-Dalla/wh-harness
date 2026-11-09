@@ -1,50 +1,50 @@
-# Test-drive 2 · calculadora, tarefa grande · 2026-11-06
+# Test drive 2 · calculadora, large task · 2026-11-06
 
-Segunda execução de ponta a ponta do `/wh:implementation`, agora no plugin `wh` 0.6.0 (working tree não commitado, Claude Code 2.1.319), para cobrir o que o test-drive de 2026-10-28 não exercitou: faixas `impl-dev` em worktree, `QUADRO.md`, `progress/`, `escopo.sh`, consultas, QA de código por faixa. Um run headless (`run.sh 3 … --permission-mode bypassPermissions --dangerously-skip-permissions --model opus`) em `/home/walter/calc-harness-test`, a partir de `main` (f846fe2), remote bare local, sem dono.
+Second end-to-end run of `/wh:implementation`, now on plugin `wh` 0.6.0 (uncommitted working tree, Claude Code 2.1.319), to cover what the 2026-10-28 test drive did not exercise: `impl-dev` lanes in worktrees, `BOARD.md`, `progress/`, `scope.sh`, queries, code QA per lane. One headless run (`run.sh 3 … --permission-mode bypassPermissions --dangerously-skip-permissions --model opus`) in `/home/walter/calc-harness-test`, from `main` (f846fe2), local bare remote, no owner.
 
-Pedido: parser de expressões (precedência, parênteses, menos unário), histórico em arquivo JSON com subcomando `history`, CLI aceitando a expressão inteira, testes; com "Triagem: grande" no pedido, para forçar faixas.
+Request: expression parser (precedence, parentheses, unary minus), history in a JSON file with a `history` subcommand, CLI accepting the whole expression, tests; with "Triage: large" in the request, to force lanes.
 
-Logs (fora do git): `/home/walter/calc-harness-logs/run-3/` (`session.jsonl`, `events.jsonl`, `impl-snapshot/`, `git/`, `analysis.txt`). Relatório que o harness escreveu: `calc-harness-test/docs/relatorios/2026-11-06-expr-hist.md`.
+Logs (outside git): `/home/walter/calc-harness-logs/run-3/` (`session.jsonl`, `events.jsonl`, `impl-snapshot/`, `git/`, `analysis.txt`). Report the harness wrote: `calc-harness-test/docs/relatorios/2026-11-06-expr-hist.md`.
 
-| Resultado | Tempo | Custo | Commits | Testes | Subagentes |
+| Result | Time | Cost | Commits | Tests | Subagents |
 |---|---|---|---|---|---|
-| CONCLUIDO, branch `impl/expr-hist` (0882c10) no remote, sem PR; 2 bugs baixos abertos, registrados | 33m58s | US$ 13,05 (opus 12,71 · sonnet 0,34) | 9 itens + 5 consertos de QA + 4 merges + relatório + docs; 9 arquivos, +1093 −52 | 77 OK (eram 16) | enrich; 3 `impl-dev` em worktree (2 na onda 1, 1 na onda 2); 3 `impl-qa codigo` (sonnet, no clone); `impl-qa final` + reteste (opus, worktree) |
+| DONE, branch `impl/expr-hist` (0882c10) on the remote, no PR; 2 low bugs open, recorded | 33m58s | US$ 13.05 (opus 12.71 · sonnet 0.34) | 9 items + 5 QA fixes + 4 merges + report + docs; 9 files, +1093 −52 | 77 OK (were 16) | enrich; 3 `impl-dev` in worktrees (2 in wave 1, 1 in wave 2); 3 `impl-qa code` (sonnet, in the clone); `impl-qa final` + retest (opus, worktree) |
 
-## O que a 0.6.0 resolveu (conferido no log)
+## What 0.6.0 solved (checked in the log)
 
-| Item | Evidência |
+| Item | Evidence |
 |---|---|
-| G1 sem dono | Nenhuma pergunta em texto; "Respostas (sem dono)" ao enriquecedor; 10 decisões na tabela "Decisões tomadas sem o dono" do relatório, com a alternativa |
-| G2 arquivos fora da worktree | Nada perdido: 10 retros, 3 checkpoints, 9 logs de Aceite, 5 saídas de QA em `impl-snapshot/`, gravados por heredoc; pastas criadas pelo orquestrador antes do enriquecedor |
-| N4 quadro sem `$(…)` | `QUADRO.md` completo: `INICIO`, 3 `CONTRATO`, 3 `AVISO`, `FIM` de cada faixa, `ONDA` e `MERGE` do orquestrador; os agentes rodaram `date -u` à parte |
-| G3 e N6 sem PR | `gh repo view` na primeira chamada da fase 1; título do relatório com a branch e "sem PR"; comando de merge no relatório e na resposta |
-| N5 git absoluto | Agentes usaram `/usr/bin/git -C <worktree>` vindo da linha `Comandos:` |
-| N7 raiz do plugin | Orquestrador chamou `escopo.sh` e `preflight.sh` pelo caminho resolvido |
-| N8 custo do enriquecedor | Enriquecedor leu `TRIAGEM.md` e só o §1 do `FAIXAS.md` (`sed`); nenhum subagente leu o `SKILL.md` |
-| G4 releitura | Orquestrador leu cada arquivo auxiliar uma vez |
-| G7 perfil | Quatro seções do perfil atualizadas no commit do relatório, marcadas "aplicado" na retro consolidada |
-| N16 limpeza | Sem worktree nem branch `worktree-agent-*` ao fim; `.impl/expr-hist/` apagado; `git status` limpo |
-| Contrato em ondas | Produtores (`parser`, `historico`) na W1, consumidor (`cli`) na W2 com as linhas `CONTRATO` do quadro; `escopo.sh` OK nas três faixas |
-| QA | QA de código confirmou as decisões nas três faixas; QA final achou 5 bugs reais (stdout cheio, fechado, não codificável, arquivo 0444), consertados e retestados; 2 voltaram no reteste único e foram para o relatório |
+| G1 no owner | No question in text; "Answers (no owner)" to the enricher; 10 decisions in the report's "Decisions taken without the owner" table, with the alternative |
+| G2 files outside the worktree | Nothing lost: 10 retros, 3 checkpoints, 9 Acceptance logs, 5 QA outputs in `impl-snapshot/`, written by heredoc; folders created by the orchestrator before the enricher |
+| N4 board without `$(…)` | Complete `BOARD.md`: `START`, 3 `CONTRACT`, 3 `WARNING`, `END` of each lane, the orchestrator's `WAVE` and `MERGE`; the agents ran `date -u` separately |
+| G3 and N6 no PR | `gh repo view` in the first call of phase 1; report title with the branch and "no PR"; merge command in the report and in the answer |
+| N5 absolute git | Agents used `/usr/bin/git -C <worktree>` taken from the `Commands:` line |
+| N7 plugin root | The orchestrator called `scope.sh` and `preflight.sh` by the resolved path |
+| N8 enricher cost | The enricher read `TRIAGE.md` and only § 1 of `LANES.md` (`sed`); no subagent read `SKILL.md` |
+| G4 re-reading | The orchestrator read each auxiliary file once |
+| G7 profile | Four profile sections updated in the report commit, marked "applied" in the consolidated retro |
+| N16 cleanup | No worktree or `worktree-agent-*` branch at the end; `.impl/expr-hist/` deleted; clean `git status` |
+| Contract in waves | Producers (`parser`, `historico`) in W1, consumer (`cli`) in W2 with the board's `CONTRACT` lines; `scope.sh` OK in all three lanes |
+| QA | Code QA confirmed the decisions in the three lanes; final QA found 5 real bugs (full, closed, non-encodable stdout, 0444 file), fixed and retested; 2 came back in the single retest and went to the report |
 
-## Gaps novos
+## New gaps
 
-Os sete foram aplicados na 0.6.1, no mesmo dia; nenhum foi conferido por um novo run.
+All seven were applied in 0.6.1, the same day; none was checked by a new run.
 
-| # | Sev. | Evidência | Proposta (arquivo do harness) |
+| # | Sev. | Evidence | Proposal (harness file) |
 |---|---|---|---|
-| T1 | alta | O guard da worktree recusa mais do que o `AMBIENTE.md` lista: 28 recusas no run. `HOME=<temp> comando` ("sets HOME, injecting git configuration"), `env -u VAR …`, heredoc para `python3`, `python3 -m unittest` com operando calculado, roteiro longo, laço, `cd` para fora. Duas faixas fecharam `PARCIAL` só porque o Aceite usava `HOME=` | `AMBIENTE.md` § Bash na worktree de agente: ampliar a lista (prefixo de variável de ambiente, `env`, heredoc para interpretador, laço, `cd` fora). `FAIXAS.md` § 1, Aceite na ponta: Aceite que precisa de variável de ambiente ou de `HOME` leva a marca "só no clone" e quem o roda é o orquestrador, no merge |
-| T2 | média | `PARCIAL` por parte do Aceite que só roda fora da worktree não é caso de continuação: o orquestrador rodou a parte que faltava na worktree de cada faixa e fez o merge, contra o `FAIXAS.md` § 3.1 novo ("`PARCIAL`: passo 9") | `FAIXAS.md` § 3.1: `PARCIAL` com todos os commits feitos e só verificação pendente = o orquestrador roda a verificação e segue; continuação só quando falta item |
-| T3 | média | Riscos de CLI só apareceram no QA final: saída padrão cheia, fechada ou não codificável; arquivo do usuário somente leitura, modo, symlink; JSON com `true`, `NaN`, `1e999` | `impl-enrich.md`, Lista de riscos: linha para CLI (stdout e stderr cheios ou fechados, codificação) e, em "formato persistido", o arquivo que já existe (modo, somente leitura, symlink) e JSON não estrito |
-| T4 | baixa | A resposta final ofereceu `/code-review ultra` sem número, embora o modo sem PR mande não oferecer | `SKILL.md` § 6.6: dizer "sem PR, não cite o `ultra`" na própria frase |
-| T5 | baixa | O enriquecedor fez um protótipo em `/tmp/expr-hist-proto` (apagado depois), fora do repo e de `.impl/`, contra `_comum § Limites` | `impl-enrich.md`: protótipo descartável vai em `<repo>/.impl/<slug>/proto/` |
-| T6 | baixa | Faixa cita em docstring um símbolo que outra faixa remove; o Aceite da W2 ficou vermelho até o conserto | `impl-enrich.md`: o arquivo de faixa não cita símbolo que o plano remove; a consulta de onda classifica cada ocorrência do `grep` por dono |
-| T7 | baixa | Log de Aceite por heredoc obriga o agente a recopiar a saída; conserto de QA que amplia o `Pode tocar` foi feito à mão; QA `codigo` não sabia se podia rodar a branch | `impl-dev.md`: log por redirecionamento simples quando o guard deixa; `FAIXAS.md` § 3.3: conserto que toca arquivo novo atualiza a linha da faixa; `impl-qa.md`: modo `codigo` não roda nada, dito na primeira linha do modo |
+| T1 | high | The worktree guard refuses more than `ENVIRONMENT.md` lists: 28 refusals in the run. `HOME=<temp> command` ("sets HOME, injecting git configuration"), `env -u VAR …`, heredoc to `python3`, `python3 -m unittest` with a computed operand, long script, loop, `cd` outside. Two lanes closed `PARTIAL` only because the Acceptance used `HOME=` | `ENVIRONMENT.md` § Bash in the agent worktree: widen the list (environment-variable prefix, `env`, heredoc to an interpreter, loop, `cd` outside). `LANES.md` § 1, Acceptance at the tip: an Acceptance that needs an environment variable or `HOME` gets the mark "clone only" and the orchestrator runs it, at merge |
+| T2 | medium | `PARTIAL` because part of the Acceptance only runs outside the worktree is not a continuation case: the orchestrator ran the missing part in each lane's worktree and merged, against the new `LANES.md` § 3.1 ("`PARTIAL`: step 9") | `LANES.md` § 3.1: `PARTIAL` with all commits done and only verification pending = the orchestrator runs the verification and moves on; continuation only when an item is missing |
+| T3 | medium | CLI risks only showed up in the final QA: standard output full, closed or non-encodable; user file read-only, mode, symlink; JSON with `true`, `NaN`, `1e999` | `impl-enrich.md`, risk list: a line for CLI (stdout and stderr full or closed, encoding) and, under "persisted format", the file that already exists (mode, read-only, symlink) and non-strict JSON |
+| T4 | low | The final answer offered `/code-review ultra` without a number, although the no-PR mode says not to offer it | `SKILL.md` § 6.6: say "no PR, do not cite `ultra`" in the sentence itself |
+| T5 | low | The enricher built a prototype in `/tmp/expr-hist-proto` (deleted later), outside the repo and `.impl/`, against `_common § Limits` | `impl-enrich.md`: a disposable prototype goes in `<repo>/.impl/<slug>/proto/` |
+| T6 | low | A lane cites in a docstring a symbol another lane removes; the W2 Acceptance stayed red until the fix | `impl-enrich.md`: the lane file does not cite a symbol the plan removes; the wave query classifies each `grep` occurrence by owner |
+| T7 | low | Acceptance log by heredoc forces the agent to recopy the output; a QA fix that widens `May touch` was done by hand; QA `code` did not know whether it could run the branch | `impl-dev.md`: log by simple redirection when the guard allows; `LANES.md` § 3.3: a fix that touches a new file updates the lane line; `impl-qa.md`: mode `code` runs nothing, said in the mode's first line |
 
-## Não observado
+## Not observed
 
-Continuação de faixa por agente novo (N1; nenhuma faixa parou com item por fazer), cópia de prints do QA visual (N2; repo sem QA visual), `REPROVADO` e `AGUARDANDO`, serviço descartável e portas, GitHub real com PR, `/wh:limpeza` com perfil, CodeGraph. Consulta `PERGUNTA` houve uma (faixa `cli`, autorizada pelo enriquecedor, linha `AVISO` do quadro).
+Lane continuation by a new agent (N1; no lane stopped with an item to do), copying visual QA screenshots (N2; repo without visual QA), `FAILED` and `WAITING`, disposable service and ports, real GitHub with a PR, `/wh:cleanup` with a profile, CodeGraph. There was one `QUESTION` query (lane `cli`, authorized by the enricher, `WARNING` line on the board).
 
-## Custo (G4b)
+## Cost (G4b)
 
-US$ 13,05 por 9 itens em 3 faixas, contra US$ 5,41 e 4,68 dos runs pequenos (3 e 5 itens, orquestrador no modelo mais caro). Opus leu 12,2M tokens de cache em todos os agentes juntos. O run não separa o custo por agente, então não dá o custo fixo de uma faixa única: a decisão do G4b continua sem medida. Para medir, repetir uma tarefa pequena com a mesma sessão em `--model opus`, inline, e comparar com os runs 1 e 2.
+US$ 13.05 for 9 items in 3 lanes, against US$ 5.41 and 4.68 for the small runs (3 and 5 items, orchestrator on the most expensive model). Opus read 12.2M cache tokens across all agents together. The run does not separate cost per agent, so it does not give the fixed cost of a single lane: the G4b decision remains unmeasured. To measure it, repeat a small task with the same session in `--model opus`, inline, and compare with runs 1 and 2.

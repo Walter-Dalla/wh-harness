@@ -3,7 +3,7 @@
 `wh` is a [Claude Code](https://claude.com/claude-code) plugin that takes a task from a one-line request to a pull request: analysis, plan, parallel implementation in worktrees, code QA, final QA, report. It works in any repository because it separates two things that usually get mixed:
 
 - **Procedures** live in the plugin: skills, subagents and one hook. They never name a project command.
-- **Facts** live in the project: build and test commands, ports, docs, limits and glossary, in `.claude/perfil/`.
+- **Facts** live in the project: build and test commands, ports, docs, limits and glossary, in `.claude/profile/`.
 
 The same `/wh:implementation` drives a .NET + Godot game, a Node API or a Python CLI without one line of project-specific text in the skill.
 
@@ -17,11 +17,11 @@ claude plugin install wh@wh-harness
 Then, in a new session at the root of your repository:
 
 ```
-/wh:adotar                                   # diagnoses the repo and writes the profiles
+/wh:adopt                                   # diagnoses the repo and writes the profiles
 /wh:implementation add CSV export to the reports page
 ```
 
-`/wh:adotar` is safe to run first: it reports what is missing (`OK` / `FALTA` / `AVISO` per piece), creates the profiles, and commits nothing. `/wh:adotar checar` only diagnoses.
+`/wh:adopt` is safe to run first: it reports what is missing (`OK` / `MISSING` / `WARN` per piece), creates the profiles, and commits nothing. `/wh:adopt check` only diagnoses.
 
 Requirements: `git`, `bash`, `python3`. Used when installed: `gh` (pull requests), `rtk` (condensed shell output), `codegraph` (code navigation).
 
@@ -29,10 +29,10 @@ Requirements: `git`, `bash`, `python3`. Used when installed: `gh` (pull requests
 
 | Command | What it does |
 |---|---|
-| `/wh:adotar` | Onboards a repository: map (`CLAUDE.md`), profiles, glossary, feature map, `contexto.json`, `settings.json` |
-| `/wh:perfil` | Writes or completes `.claude/perfil/_comum.md` and one profile per skill, each fact with its source |
+| `/wh:adopt` | Onboards a repository: map (`CLAUDE.md`), profiles, glossary, feature map, `context.json`, `settings.json` |
+| `/wh:profile` | Writes or completes `.claude/profile/_common.md` and one profile per skill, each fact with its source |
 | `/wh:implementation` | A task from request to pull request (see below) |
-| `/wh:limpeza` | Post-run cleanup: executed plans, open items moved to their home docs, stale docs, worktrees |
+| `/wh:cleanup` | Post-run cleanup: executed plans, open items moved to their home docs, stale docs, worktrees |
 | `/wh:retro` | Retrospective of a session: candidates to improve the agent's environment, nothing applied |
 | `/wh:qa-visual` | Drives the real product against an isolated service, reads screenshots, writes a bug report |
 | `/wh:feature-docs` | Keeps a feature map (index + one file per feature) in sync with the code |
@@ -76,7 +76,7 @@ Agent instructions rot when they mix "how to work" with "what this repo is". Cop
 | deploy, start-app, visual QA, feature docs, brainstorm procedures | deploy target, ports, QA harness, feature map |
 | the prompt-enrichment hook | glossary, feature map, CodeGraph index |
 
-A skill cites a profile section (`perfil § Testes`), never a command. A test (`tests/test_refs.py`) fails when a skill or agent cites a section that the profile template does not have.
+A skill cites a profile section (`profile § Tests`), never a command. A test (`tests/test_refs.py`) fails when a skill or agent cites a section that the profile template does not have.
 
 ## Architecture
 
@@ -84,18 +84,18 @@ A skill cites a profile section (`perfil § Testes`), never a command. A test (`
 flowchart LR
   subgraph plugin["plugin wh (this repo)"]
     S["skills/&lt;skill&gt;/SKILL.md<br/>procedure"]
-    P["skills/&lt;skill&gt;/PERFIL.md<br/>profile template"]
+    P["skills/&lt;skill&gt;/PROFILE.md<br/>profile template"]
     A["agents/impl-*.md"]
     H["hooks/ + scripts/prompt_graph.py"]
   end
   subgraph project["any repository"]
-    C[".claude/perfil/_comum.md<br/>.claude/perfil/&lt;skill&gt;.md"]
-    X[".claude/perfil/contexto.json"]
+    C[".claude/profile/_common.md<br/>.claude/profile/&lt;skill&gt;.md"]
+    X[".claude/profile/context.json"]
     G["glossary + docs/features/"]
     CG[".codegraph/ (SQLite)"]
   end
   S -- "!cat at load time" --> C
-  P -. "/wh:perfil writes" .-> C
+  P -. "/wh:profile writes" .-> C
   S -- "spawns" --> A
   H -- "reads" --> X
   X --> G
@@ -108,10 +108,10 @@ flowchart LR
 Every skill starts with a pre-processing line that Claude Code runs before the model reads the skill:
 
 ```markdown
-!`cat .claude/perfil/_comum.md .claude/perfil/implementation.md 2>/dev/null || echo PERFIL_AUSENTE`
+!`cat .claude/profile/_common.md .claude/profile/implementation.md 2>/dev/null || echo PROFILE_MISSING`
 ```
 
-If a profile is missing or lacks a section of the template, the skill calls `/wh:perfil`. That skill reads the repo (`CLAUDE.md`, CI workflows, build scripts, README), writes one fact per line with its source in brackets (`[ci: tests.yml]`, `[inferido]`), and asks the owner to confirm the inferred lines, one question per profile section. A section with no answer stays `—`, and the phase that depends on it is skipped and reported as skipped.
+If a profile is missing or lacks a section of the template, the skill calls `/wh:profile`. That skill reads the repo (`CLAUDE.md`, CI workflows, build scripts, README), writes one fact per line with its source in brackets (`[ci: tests.yml]`, `[inferido]`), and asks the owner to confirm the inferred lines, one question per profile section. A section with no answer stays `—`, and the phase that depends on it is skipped and reported as skipped.
 
 ### `prompt-graph`: deterministic prompt enrichment
 
@@ -134,13 +134,13 @@ With a CodeGraph index present it also lists entry symbols as `file:line`.
 - **Matching:** accent and case folding, light plural stemming, greedy longest n-gram first, weights split across the features a key points to.
 - **Cost:** rebuilt only when a source changes (mtime signature, atomic write). In a real project with 29 features, 240 terms and 334 symbols: about 0.2 s to rebuild and about 30 ms per prompt with a warm cache, adding 0 to 900 characters. A prompt with no domain words adds nothing.
 
-A project opts in with `.claude/perfil/contexto.json`; without that file the hook does not even start Python. `WH_PROMPT_GRAPH=0` turns it off for a session. See [`examples/demo`](examples/demo).
+A project opts in with `.claude/profile/context.json`; without that file the hook does not even start Python. `WH_PROMPT_GRAPH=0` turns it off for a session. See [`examples/demo`](examples/demo).
 
 ## Use it in a project
 
 1. Install the plugin (Quick start).
-2. Run `/wh:adotar` at the repo root, or by hand: `/wh:perfil` generates `.claude/perfil/_comum.md` and one profile per skill; review the `[inferido]` lines and the `## Limites` section (what no agent may touch).
-3. Optional: a glossary, a feature map and `.claude/perfil/contexto.json` turn on `prompt-graph`.
+2. Run `/wh:adopt` at the repo root, or by hand: `/wh:profile` generates `.claude/profile/_common.md` and one profile per skill; review the `[inferido]` lines and the `## Limites` section (what no agent may touch).
+3. Optional: a glossary, a feature map and `.claude/profile/context.json` turn on `prompt-graph`.
 4. Declare the plugin in the project's `.claude/settings.json`, so teammates are offered it when they trust the folder:
 
    ```json
@@ -152,25 +152,25 @@ A project opts in with `.claude/perfil/contexto.json`; without that file the hoo
    }
    ```
 
-5. Commit `.claude/perfil/` and `.claude/settings.json`, and open a new session.
+5. Commit `.claude/profile/` and `.claude/settings.json`, and open a new session.
 
-Cost note: the orchestrator runs on the session's model and pays most of the bill; the profile's `§ Modelos` only chooses the subagents' models. For harness tasks, `claude --model opus` is a sensible default.
+Cost note: the orchestrator runs on the session's model and pays most of the bill; the profile's `§ Models` only chooses the subagents' models. For harness tasks, `claude --model opus` is a sensible default.
 
 ## Repository layout
 
 | Path | What |
 |---|---|
-| `plugins/wh/skills/<skill>/SKILL.md` | the procedure of each skill; `PERFIL.md` beside it is the template of its profile |
-| `plugins/wh/skills/implementation/` | `TRIAGEM.md` (triage and plan format), `FAIXAS.md` (parallel lanes), `AMBIENTE.md` (agent protocol), `RELATORIO.md` (retros and report), `scripts/preflight.sh`, `scripts/escopo.sh` |
-| `plugins/wh/skills/adotar/scripts/checar.py` | the deterministic onboarding diagnostic |
+| `plugins/wh/skills/<skill>/SKILL.md` | the procedure of each skill; `PROFILE.md` beside it is the template of its profile |
+| `plugins/wh/skills/implementation/` | `TRIAGE.md` (triage and plan format), `LANES.md` (parallel lanes), `ENVIRONMENT.md` (agent protocol), `REPORT.md` (retros and report), `scripts/preflight.sh`, `scripts/scope.sh` |
+| `plugins/wh/skills/adopt/scripts/check.py` | the deterministic onboarding diagnostic |
 | `plugins/wh/agents/` | `impl-enrich`, `impl-dev`, `impl-qa` |
 | `plugins/wh/hooks/`, `plugins/wh/scripts/prompt_graph.py` | the enrichment hook (Python stdlib only) |
 | `examples/demo` | a tiny bakery project with profiles, a glossary and a feature map |
 | `tests/` | hook, shell scripts, diagnostic and section references |
-| [`docs/MANUAL.pt-BR.md`](docs/MANUAL.pt-BR.md) | full technical manual (Portuguese): mechanisms, formats, debugging, known limits |
+| [`docs/MANUAL.md`](docs/MANUAL.md) | full technical manual: mechanisms, formats, debugging, known limits |
 | [`docs/testes/`](docs/testes) | test-drive reports and the review that followed them |
 
-Skills and profile templates are written in Portuguese. The hook handles both languages: section names in PT or EN, output labels via `"idioma": "en"`.
+Skills, profile templates and agents are written in English (since 0.7.0; profiles generated by earlier versions need `/wh:profile` again, because the `##` section names changed). The hook handles glossary and feature docs in both languages: section names in PT or EN, output labels via `"idioma": "en"`.
 
 ## Develop the harness
 
@@ -194,7 +194,7 @@ A change to a skill, an agent or the hook bumps `version` in `plugins/wh/.claude
 
 ## Origin
 
-Extracted from the agent setup of KittyCaffee, an idle café game (.NET 10 backend and Godot 4 client) built mostly by Claude Code agents. That repo now keeps only `.claude/perfil/`.
+Extracted from the agent setup of KittyCaffee, an idle café game (.NET 10 backend and Godot 4 client) built mostly by Claude Code agents. That repo now keeps only `.claude/profile/`.
 
 ## License
 

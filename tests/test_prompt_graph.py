@@ -92,7 +92,7 @@ class PromptGraphTest(unittest.TestCase):
         self.assertIn('docs/features/orders.md', ctx)
 
     def test_hook_is_silent_without_config_short_prompt_or_opt_out(self):
-        os.remove(os.path.join(self.repo, '.claude', 'perfil', 'contexto.json'))
+        os.remove(os.path.join(self.repo, '.claude', 'profile', 'context.json'))
         self.assertEqual(self.hook('the pickup slot is wrong for late orders'), '')
         shutil.copytree(DEMO, self.repo, dirs_exist_ok=True)
         self.assertEqual(self.hook('orders'), '')
@@ -104,7 +104,7 @@ class PromptGraphTest(unittest.TestCase):
         self.assertIn('orders.md', self.hook('the pickup slot is wrong for late orders', cwd=sub))
 
     def test_hook_is_silent_with_invalid_config(self):
-        with open(os.path.join(self.repo, '.claude', 'perfil', 'contexto.json'), 'w', encoding='utf-8') as fh:
+        with open(os.path.join(self.repo, '.claude', 'profile', 'context.json'), 'w', encoding='utf-8') as fh:
             fh.write('{nope')
         self.assertEqual(self.hook('the pickup slot is wrong for late orders'), '')
 
@@ -149,7 +149,7 @@ class PromptGraphLimitsTest(PromptGraphTest):
         os.makedirs(os.path.join(self.repo, 'client', 'ui'))
         with open(os.path.join(self.repo, 'client', 'ui', 'stamp_card.gd'), 'w', encoding='utf-8') as fh:
             fh.write('extends Control\nclass_name StampCardView\n')
-        cfg_path = os.path.join(self.repo, '.claude', 'perfil', 'contexto.json')
+        cfg_path = os.path.join(self.repo, '.claude', 'profile', 'context.json')
         with open(cfg_path, encoding='utf-8') as fh:
             cfg = json.load(fh)
         cfg['class_name_globs'] = ['client/**/*.gd']
