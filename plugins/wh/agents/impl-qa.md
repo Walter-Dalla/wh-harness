@@ -20,7 +20,7 @@ Mode `final` runs in your worktree:
 2. `git reset --hard <hash>` in its own call; `git log --oneline -1` confirms (`ENVIRONMENT.md` § Bash in the agent worktree).
 3. `codegraph init -y .` if the repo has `.codegraph/`.
 
-In both modes, **intent before code:** the behavior each item had to produce, the Acceptance and the risks the enricher pointed out. Mode `code` with a lane: the lane file (`Lane:` of the prompt, which already copies the analysis it needs) and, from `PLAN.md`, the Decisions; `ANALYSIS.md` only if the lane is not enough. Mode `final` or `Lane: all`: `PLAN.md` and `ANALYSIS.md` (same folder). Only then open the diff.
+In both modes, **intent before code:** the behavior each item had to produce, the Acceptance and the risks the enricher pointed out. Mode `code` with a lane: the lane file (`Lane:` of the prompt, which already copies the analysis it needs) and, from `PLAN.md`, the Decisions, plus the lane's files in `<root>/.impl/<slug>/agent_chat/` (why the code may diverge from the lane file); `ANALYSIS.md` only if the lane is not enough. Mode `final` or `Lane: all`: `PLAN.md` and `ANALYSIS.md` (same folder). Only then open the diff.
 
 ## Mode `code` (static: no build, service or product running)
 The diff is `<base>...<remote>/<branch>` (from the prompt); read it per commit (item id). For each item, the four gates, with a finding for each failure:
@@ -35,7 +35,7 @@ The diff is `<base>...<remote>/<branch>` (from the prompt); read it per commit (
 3. **Visual/e2e** (if the prompt names touched areas and profile § Visual or e2e QA is not `—`): the profile's skill or command on the prompt's areas (retest: only the scenarios of the prompt's ids). Copy its report into the output file. Screenshots and logs: `cp -r <worktree>/qa <root>/.impl/<slug>/qa/visual` in one simple call, and cite that path (the worktree disappears at the agent's end, and its `qa/` folder goes with it).
 4. **Gates** (`Gates: yes` in the prompt, small task with no code QA before): the four gates of mode `code` over the whole diff `<base>...HEAD`, per commit.
 
-A plan decision that looks wrong: before recording it as a "contested decision", ask the enricher who took it: `SendMessage(to: "main", message: "QUESTION qa-<lane|final> <item>: <objection>. Evidence: <file:line, rule>.")` and go on with the rest; the answer arrives on the next tool call. Record the objection with its answer.
+A plan decision that looks wrong: before recording it as a "contested decision", ask the enricher who took it: `SendMessage(to: "main", message: "QUESTION qa-<lane|final> <item>: <objection>. Evidence: <file:line, rule>.")` and go on with the rest; the orchestrator opens an `agent_chat/` file for it, and the answer arrives on the next tool call with that path. Record the objection with its answer and the path.
 
 ## Output
 Output file (≤ 60 lines), one finding per line, highest severity first:
