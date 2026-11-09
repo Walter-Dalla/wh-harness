@@ -10,7 +10,7 @@ Acceptance of an item = an area test that only goes green with the item done; fo
 
 ## Checks
 `for f in plugins/wh/skills/*/scripts/*.sh; do bash -n "$f"; done` (per item touching a `.sh`) [ci: ci.yml]
-`shellcheck -S warning plugins/wh/skills/*/scripts/*.sh` (final QA, only where installed) [ci: ci.yml]
+`shellcheck -S warning plugins/wh/skills/*/scripts/*.sh` (per item touching a `.sh`, and final QA) [ci: ci.yml]
 `python3 -m json.tool plugins/wh/.claude-plugin/plugin.json > /dev/null` (per item touching a manifest) [ci: ci.yml]
 `claude plugin validate ./plugins/wh --strict` (final QA) [ci: ci.yml]
 `! grep -rnIE --exclude-dir=__pycache__ '/home/[a-z]+|C:\\Users' plugins examples tests` (final QA: no personal paths) [ci: ci.yml]

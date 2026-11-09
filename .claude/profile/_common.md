@@ -4,7 +4,7 @@
 — (the current checkout, native Linux/WSL; worktrees under `.claude/worktrees/`) [owner]
 
 ## Toolchain
-Python: `python3` (CI runs 3.11 and 3.13) [ci: ci.yml]. Shell: `bash`; `shellcheck` is not installed locally (CI runs it) [owner]. Plugin validation: `claude plugin validate ./plugins/wh --strict` [ci: ci.yml].
+Python: `python3` (CI runs 3.11 and 3.13) [ci: ci.yml]. Shell: `bash`; `shellcheck` at `/usr/bin/shellcheck` (installed 2026-11-09) [owner]. Plugin validation: `claude plugin validate ./plugins/wh --strict` [ci: ci.yml].
 
 ## Git
 Main branch: `main`. PR remote: `origin` (GitHub `Walter-Dalla/wh-harness`) [git remote]. Merge to `main` goes through PRs [git log].
