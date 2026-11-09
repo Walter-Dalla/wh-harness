@@ -428,6 +428,49 @@ class ScriptsTest(unittest.TestCase):
         self.assertIn('OUTSIDE: union/c.txt', out)
         self.assertNotIn('src/a.cs', out)
 
+    # ---- intake.sh
+
+    def test_intake_resolves_ids_paths_no_argument_and_next(self):
+        intake = os.path.join(SCRIPTS, 'intake.sh')
+
+        def facts(*args):
+            code, out = run(intake, self.tmp, self.repo, *args)
+            self.assertEqual(code, 0, out)
+            self.assertEqual(out.splitlines()[-1], 'INTAKE OK')
+            return dict(l.split('=', 1) for l in out.splitlines() if '=' in l)
+
+        self.write('.claude/profile/_common.md', '# Common\n\n## Pending\n`docs/pending/`\n\n## Limits\n`other/`\n')
+        self.write('docs/pending/P-001-alpha.md', '---\nid: P-001\nstatus: open\n---\n')
+        self.write('docs/pending/P-002-beta.md', '---\nid: P-002\nstatus: dropped\n---\n')
+        self.write('docs/pending/P-003-gamma.md', '---\nid: P-003\nstatus: open\n---\n')
+        pend = os.path.join(os.path.realpath(self.repo), 'docs', 'pending')
+        alpha, gamma = os.path.join(pend, 'P-001-alpha.md'), os.path.join(pend, 'P-003-gamma.md')
+
+        env = facts('P-001')
+        self.assertEqual((env['PENDING_DIR'], env['INTAKE'], env['PENDING'], env['SLUG']), (pend, 'file', alpha, 'alpha'))
+        env = facts('docs/pending/P-003-gamma.md', 'P-001')
+        self.assertEqual((env['INTAKE'], env['PENDING'], env['SLUG']), ('file', f'{alpha} {gamma}', 'pending-001-003'))
+        env = facts('P-001', 'fix', 'the', 'thing')
+        self.assertEqual((env['INTAKE'], env['PENDING'], env['SLUG']), ('raw', alpha, '—'))
+        env = facts('P-009', 'docs/pending/P-404.md')
+        self.assertEqual((env['INTAKE'], env['PENDING'], env['SLUG']), ('raw', '', '—'))
+        env = facts()
+        self.assertEqual((env['INTAKE'], env['PENDING'], env['SLUG']), ('file', f'{alpha} {gamma}', 'pending-001-003'))
+        self.assertEqual(run(intake, self.tmp, self.repo, 'next'), (0, 'P-004\n'))
+
+        empty = os.path.join(self.tmp, 'empty')
+        os.makedirs(empty)
+        self.assertEqual(run(intake, self.tmp, empty, 'next'), (0, 'P-001\n'))
+        self.assertTrue(os.path.isdir(os.path.join(empty, 'docs', 'pending')))
+        code, out = run(intake, self.tmp, empty)
+        self.assertEqual(code, 1, out)
+        self.assertIn('INTAKE FAILED: no open pending file', out)
+        code, out = run(intake, self.tmp)
+        self.assertEqual(code, 2, out)
+        self.assertIn('INTAKE FAILED: usage:', out)
+        code, out = run(intake, self.tmp, os.path.join(self.tmp, 'missing'))
+        self.assertEqual(code, 2, out)
+
 
 if __name__ == '__main__':
     unittest.main()
