@@ -4,7 +4,7 @@
 #   board.sh <board> <who> <KIND> <text...>
 #
 # One simple command, no `$(…)` on the caller's side: made for the agent worktree, where the guard refuses
-# substitutions. KIND is uppercased (START, CONTRACT, WARNING, HUMAN, END, MERGE, WAVE).
+# substitutions. KIND is uppercased (START, CONTRACT, WARNING, HUMAN, CONSULT, END, MERGE, WAVE).
 set -u
 if [ $# -lt 4 ]; then
   echo "BOARD FAILED: usage: board.sh <board> <who> <KIND> <text...>"

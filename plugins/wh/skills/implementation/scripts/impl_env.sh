@@ -41,7 +41,7 @@ for line in .impl/ .claude/worktrees/; do
 done
 
 impl=.impl/$slug
-mkdir -p "$impl/qa" "$impl/retros" "$impl/progress" "$impl/acceptance"
+mkdir -p "$impl/qa" "$impl/retros" "$impl/progress" "$impl/acceptance" "$impl/agent_chat"
 [ -f "$impl/BOARD.md" ] || : > "$impl/BOARD.md"
 
 pr_mode=none

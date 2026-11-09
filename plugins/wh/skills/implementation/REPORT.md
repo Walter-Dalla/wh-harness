@@ -11,7 +11,7 @@
 
 ## Report (profile § Report, default `docs/reports/<date>-<slug>.md`, orchestrator only)
 
-Sources: the lane reports, the board (`HUMAN`, `WARNING`, `END` with each lane's state), the retros, the phase 4 validation, the merge conflicts you resolved and the QA reports (`qa/<lane|code>.md`, `qa/final.md` and the retests). Each line says what, where (file/symbol or command) and what is already done; an owner action comes with the command or text ready.
+Sources: the lane reports, the board (`HUMAN`, `WARNING`, `END` with each lane's state), the retros, the phase 4 validation, the merge conflicts you resolved and the QA reports (`qa/<lane|code>.md`, `qa/final.md` and the retests) and the consultations (`agent_chat/`). Each line says what, where (file/symbol or command) and what is already done; an owner action comes with the command or text ready.
 
 ```markdown
 # <title> · <date> · impl/<slug> · <PR on GitHub | no PR>
@@ -21,7 +21,10 @@ Enriched request (3 lines). Lanes: <lane: items, commits>. No PR: the merge comm
 Remaining test, check or lint failures, merge conflicts and how they were resolved, fixes made at integration.
 
 ## Open items
-Skipped or partial items and why; HUMAN lines; decisions taken without the owner (question, adopted option, alternative) and unconfirmed `[inferred]` profile lines; contracts that changed (fields) and what needs a joint deploy; scenarios for the profile's visual/e2e QA; profile sections left `—` and the phase that skipped.
+Skipped or partial items and why; HUMAN lines; decisions taken without the owner (question, adopted option, alternative) and unconfirmed `[inferred]` profile lines; contracts that changed (fields) and what needs a joint deploy; scenarios for the profile's visual/e2e QA; profile sections left `—` and the phase that skipped. Each item line ends with the pending file id it became (`→ P-NNN`).
+
+## Consultations
+One line per file of `<root>/.impl/<slug>/agent_chat/`: `<lane> <item> · <question, short> · <answer, short> · impact <impact> · <who answered>`. Those that ended in `OWNER:` or `replan` also became pending files (§ Open items).
 
 ## QA
 Decisions contested by the code QA (decision, objection, outcome); findings of the code QA and of the visual/e2e QA: fixed (commit) / retested / recorded (why). Deeper review, only if the owner wants it and only with a PR: `/code-review ultra <PR number>` (multi-agent in the cloud, billed). The PR number is born in phase 6.5, after this file: the ready command goes in the final answer. Without a PR, this section does not mention `ultra`. No agent or subagent triggers `ultra` or proposes it as an agent's next step.

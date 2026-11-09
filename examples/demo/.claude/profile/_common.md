@@ -19,5 +19,8 @@ The owner's: `5000`. Range for the `/wh:implementation` agents: `5100–5105`. V
 `docs/GLOSSARY.md` — glossary (business × code × terms to avoid). [context.json]
 `docs/features/README.md` — index of the feature map; one file per feature beside it. [context.json]
 
+## Pending
+`docs/pending/` [inferred]
+
 ## Limits
 No agent touches production, secrets, port `5000` or files outside the repo and the scratchpad. [inferred]
