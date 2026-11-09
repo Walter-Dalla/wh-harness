@@ -57,7 +57,7 @@ Run 2: profile present (phase 1 in 11s); enrich 91s + 47s (3 questions, same aut
 | G14 | low | install | The plugin cache stayed at 0.2.0 until `claude plugin update wh@wh-harness`; MANUAL § 4 says an edit in the directory "takes effect in the next session, no push" | MANUAL § 4 (maintainer): add `claude plugin update wh@wh-harness` after editing, or document `--plugin-dir` |
 | G15 | low | test | `.impl/<slug>/` vanishes in cleanup; without the external snapshot there is no trail of what each agent wrote | `SKILL.md` § 6.4 optional: `tar` of `.impl/<slug>/` to `docs/relatorios/<slug>.impl.tgz`? Probably not: the report consolidates. Leave as is, record it |
 
-Not observed: large task (`impl-dev` lanes, `BOARD.md`, `progress/`, `scope.sh`, `QUESTION` queries), `/wh:cleanup` with a profile (cleanup was the inline one), `/wh:feature-docs`, `/wh:qa-visual`, `/wh:start-app`, CodeGraph. Caveman (owner's hooks) did not leak into any written `.md`.
+Not observed: large task (`impl-dev` lanes, `BOARD.md`, `progress/`, `scope.sh`, `QUESTION` queries), `/wh:cleanup` with a profile (cleanup was the inline one), `/wh:feature-docs`, `/wh:qa-visual`, `/wh:start-app`, CodeGraph.
 
 ## Suggested next steps (nothing applied)
 
