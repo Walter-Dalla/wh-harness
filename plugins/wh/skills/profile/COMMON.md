@@ -23,6 +23,9 @@ The owner's (never used by a skill): e.g. `5000`. Range for the `/wh:implementat
 ## Docs
 One per line, `path` — what it is: map (`CLAUDE.md`), layer rules that do not load on their own (`conventions.md`, `<client>/CLAUDE.md`), feature map (`docs/features/README.md`), status and debt (`FEATURES.md`), glossary, open items of the owner and of the agents, changelog, task reports, UI brief.
 
+## Pending
+Folder of the owner's pending items, one file per item in the format of `${CLAUDE_PLUGIN_ROOT}/skills/implementation/PENDING.md` (default `docs/pending/`; the intake script falls back to it when this section is absent). `—` = the default.
+
 ## Limits
 What no agent touches: production (URL, server, SSH), real MCPs, the owner's ports and databases, files outside the repo and the scratchpad, secrets.
 ```

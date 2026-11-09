@@ -43,7 +43,7 @@ Where what the task changes or leaves open goes: changelog, feature status, owne
 Folder of the task reports (default `docs/reports/<date>-<slug>.md`).
 
 ## Models
-The owner's rule for the model of each role (enricher, mechanical lane, structural lane, QA). `—` = the skill's default.
+The owner's rule for the model of each role (structurer, enricher, mechanical lane, structural lane, QA). `—` = the skill's default.
 
 ## Worktree commands
 Learned from the runs: what the isolation guard refuses and the form that passes. `—` in the first profile; the retros add to it.
