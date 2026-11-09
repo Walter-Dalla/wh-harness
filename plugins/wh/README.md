@@ -22,7 +22,7 @@ Then run `/wh:adopt` at the root of a repository: it diagnoses what is missing a
 | `/wh:retro` | retrospective of a session: candidates to improve the agent's environment |
 | `/wh:start-app`, `/wh:qa-visual`, `/wh:feature-docs`, `/wh:deploy`, `/wh:brainstorm` | the rest of the lifecycle, each driven by its own profile |
 
-Subagents: `wh:impl-enrich`, `wh:impl-dev`, `wh:impl-qa`, spawned by `/wh:implementation`. `/wh:adopt agents` also copies project versions of Claude Code's `Explore` and `Plan` agents into `.claude/agents/`, so they follow the repo's navigation rules (CodeGraph, glossary, feature map, certainty marks).
+Subagents: `wh:impl-structure`, `wh:impl-enrich`, `wh:impl-dev`, `wh:impl-qa`, spawned by `/wh:implementation`. `/wh:adopt agents` also copies project versions of Claude Code's `Explore` and `Plan` agents into `.claude/agents/`, so they follow the repo's navigation rules (CodeGraph, glossary, feature map, certainty marks).
 
 ## Hook
 

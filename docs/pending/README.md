@@ -1,8 +1,6 @@
 # Pending
 
-Gaps in the harness found by the owner, waiting to become work. One file per item, `P-NNN-<slug>.md`. An item leaves this folder when it lands (the commit cites the id) or when the owner drops it.
-
-This is also the format proposed as the default intake of `/wh:implementation` (see [P-001](P-001-pending-file-intake.md)): the same fields a structurer fills before the enricher runs.
+Gaps in the harness found by the owner, waiting to become work: one file per item, `P-NNN-<slug>.md`, in the format of [`plugins/wh/skills/implementation/PENDING.md`](../../plugins/wh/skills/implementation/PENDING.md) (copied below). `/wh:implementation P-NNN` runs one item, `/wh:implementation` with no argument runs every `status: open` item; an item leaves this folder when it lands (the commit cites the id) or when the owner drops it.
 
 ## Format
 
@@ -34,5 +32,6 @@ Symbols the change touches or depends on, resolved by CodeGraph (`codegraph expl
 Docs, test-drive reports, runs, decisions that explain the item.
 
 ## Open questions
-What the owner still decides. `—` when nothing.
+What the owner still decides, one `- <question>` per line; an answered one stays, as `- <question> → <answer> (owner, <date>)`. `—` when nothing.
 ```
+

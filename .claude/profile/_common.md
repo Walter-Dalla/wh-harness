@@ -22,5 +22,8 @@ Main branch: `main`. PR remote: `origin` (GitHub `Walter-Dalla/wh-harness`) [git
 `docs/pending/` — owner's open items, one file per item (`docs/pending/README.md` § Format) [docs/pending/README.md]
 `docs/testes/` — test-drive reports [owner]
 
+## Pending
+`docs/pending/` [owner]
+
 ## Limits
 No agent touches `~/.claude/` (user config, hooks), files outside the repo and the scratchpad, or the `examples/demo` fixtures beyond what a test needs [owner].

@@ -38,13 +38,15 @@ Requirements: `git`, `bash`, `python3`. Used when installed: `gh` (pull requests
 | `/wh:feature-docs` | Keeps a feature map (index + one file per feature) in sync with the code |
 | `/wh:start-app`, `/wh:deploy`, `/wh:brainstorm` | Run the app, publish it, generate product ideas, each from its own profile |
 
-Subagents, spawned by `/wh:implementation`: `wh:impl-enrich` (architect), `wh:impl-dev` (one lane), `wh:impl-qa` (reviewer).
+Subagents, spawned by `/wh:implementation`: `wh:impl-structure` (turns a raw request into pending files), `wh:impl-enrich` (architect), `wh:impl-dev` (one lane), `wh:impl-qa` (reviewer).
 
 ## How `/wh:implementation` works
 
 ```mermaid
 flowchart LR
-  R["request"] --> E["impl-enrich<br/>analysis + plan"]
+  R["raw request"] --> S["impl-structure<br/>pending files"]
+  S --> E["impl-enrich<br/>analysis + plan"]
+  PF["pending file(s)<br/>or no argument"] --> E
   E -- "small" --> I["orchestrator<br/>inline, one commit per item"]
   E -- "large" --> L["impl-dev lanes<br/>parallel worktrees, in waves"]
   L --> Q["impl-qa<br/>static review per lane"]
@@ -163,7 +165,7 @@ Cost note: the orchestrator runs on the session's model and pays most of the bil
 | `plugins/wh/skills/<skill>/SKILL.md` | the procedure of each skill; `PROFILE.md` beside it is the template of its profile |
 | `plugins/wh/skills/implementation/` | `TRIAGE.md` (triage and plan format), `LANES.md` (parallel lanes), `ENVIRONMENT.md` (agent protocol), `REPORT.md` (retros and report), `scripts/preflight.sh`, `scripts/scope.sh` |
 | `plugins/wh/skills/adopt/scripts/check.py` | the deterministic onboarding diagnostic |
-| `plugins/wh/agents/` | `impl-enrich`, `impl-dev`, `impl-qa` |
+| `plugins/wh/agents/` | `impl-structure`, `impl-enrich`, `impl-dev`, `impl-qa` |
 | `plugins/wh/hooks/`, `plugins/wh/scripts/prompt_graph.py` | the enrichment hook (Python stdlib only) |
 | `examples/demo` | a tiny bakery project with profiles, a glossary and a feature map |
 | `tests/` | hook, shell scripts, diagnostic and section references |
