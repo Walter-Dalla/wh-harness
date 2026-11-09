@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Brainstorm
 
-Perfil do projeto (injetado; `PERFIL_AUSENTE` = `Skill(wh:perfil, "brainstorm")` antes de seguir):
+Perfil do projeto (injetado; `PERFIL_AUSENTE` = `Skill(wh:perfil, "brainstorm")` e depois `Read` dos dois arquivos, porque a injeção abaixo rodou antes de o perfil existir):
 !`cat .claude/perfil/_comum.md .claude/perfil/brainstorm.md 2>/dev/null || echo PERFIL_AUSENTE`
 
 Saída: uma nota rascunho com ideias para o dono decidir, em PT-BR, não código. Código, status de features e `docs/` ficam como estão. Promover uma ideia a trabalho é outro passo (o dono decide; depois o doc de status e `/wh:feature-docs`).

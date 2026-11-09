@@ -1,11 +1,11 @@
 ---
 name: qa-visual
-description: QA visual e funcional do cliente do repositório atual contra um serviço local isolado — roda o produto de verdade, dirige com input real pelo harness do repo, tira e lê prints, cruza com o backend e escreve um relatório de bugs com evidência (qa/RELATORIO_QA.md). Encontra e documenta, só; nunca corrige. Use para "rodar QA", "testar visualmente", "achar bugs de UI/UX", "QA da feature X" ou reteste. Harness, fixtures, tempos e armadilhas vêm de .claude/perfil/qa-visual.md.
+description: QA visual e funcional do cliente contra um serviço local isolado: dirige o produto, lê prints e escreve relatório de bugs com evidência. Nunca corrige. Use para "rodar QA", "testar visualmente".
 ---
 
 # QA visual e funcional
 
-Perfil do projeto (injetado; `PERFIL_AUSENTE` = `Skill(wh:perfil, "qa-visual")` antes de seguir):
+Perfil do projeto (injetado; `PERFIL_AUSENTE` = `Skill(wh:perfil, "qa-visual")` e depois `Read` dos dois arquivos, porque a injeção abaixo rodou antes de o perfil existir):
 !`cat .claude/perfil/_comum.md .claude/perfil/qa-visual.md 2>/dev/null || echo PERFIL_AUSENTE`
 
 Rode o produto de verdade, exercite as features, tire prints, **olhe cada print** e entregue um relatório de bugs com evidência. **Nada é corrigido**: só encontrado, reproduzido, evidenciado e documentado.

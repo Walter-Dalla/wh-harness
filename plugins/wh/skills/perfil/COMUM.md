@@ -15,7 +15,7 @@ Os comandos que mudam por checkout ou SO: build/test (`dotnet` vs `dotnet.exe`, 
 Principal: `main`. Remote de PR: `origin` (ou o nome que aponta para o GitHub). Branches protegidas. Identidade e push (ex.: `git -c user.name=…`, `git.exe push` quando a credencial mora no Windows). Checkout compartilhado com outras sessões: `git branch --show-current` antes de commitar.
 
 ## Portas
-Do dono (nunca usadas por skill): `5000`. Faixa dos agentes do `/wh:implementation`: `5100–5105`. QA visual/e2e: a partir de `5108` (primeira livre, nunca derruba o que já está numa porta).
+Do dono (nunca usadas por skill): ex.: `5000`. Faixa dos agentes do `/wh:implementation` (6 portas): ex.: `5100–5105`. QA visual/e2e: ex.: a partir de `5108` (primeira livre, nunca derruba o que já está numa porta). Os números são exemplo: ponha os do repo, com a fonte.
 
 ## Navegação
 `.codegraph/` presente e o que cobre: `codegraph explore -p . "<símbolos ou pergunta>"` (worktree: `codegraph init -y .` uma vez; `codegraph sync .` depois de editar). O que o índice não cobre (linguagens, cenas, configs, docs): `grep`/`Read`. Índice do cliente, se houver (ex.: `scripts/INDICE.md`).

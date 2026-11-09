@@ -1,11 +1,11 @@
 ---
 name: perfil
-description: Gera ou completa o perfil de projeto de uma skill (`.claude/perfil/_comum.md` e `.claude/perfil/<skill>.md`) a partir do PERFIL.md da skill. Chamada por outra skill quando o perfil falta ou tem seção a menos, ou pelo dono com `/wh:perfil <skill>`.
+description: Gera ou completa o perfil de projeto de uma skill (.claude/perfil/_comum.md e <skill>.md) a partir do PERFIL.md dela. Chamada por outra skill ou com /wh:perfil <skill>.
 ---
 
 # Perfil de projeto
 
-Argumento: o nome da skill (`start-app`, `deploy`, `implementation`…). Sem argumento: todas as skills de `${CLAUDE_PLUGIN_ROOT}/skills/*/PERFIL.md`.
+Argumento: o nome da skill (`start-app`, `deploy`, `implementation`…), e `adiar` depois dele quando a skill chamadora vai confirmar as linhas `[inferido]` ela mesma (§ 3). Sem argumento, ou só `adiar`: `implementation` e as skills cuja fonte existe no repo (`deploy` com pasta ou workflow de deploy; `start-app` com serviço ou cliente para subir; `qa-visual` com harness de QA; `feature-docs` com pasta de features; `limpeza` com changelog ou pasta de planos); `brainstorm` só com argumento. Modelos em `${CLAUDE_PLUGIN_ROOT}/skills/*/PERFIL.md`. Perfil de skill que o repo não usa é lixo versionado, não um `—` a mais.
 
 Um **perfil** é o que uma skill genérica precisa saber do repositório e não descobre sozinha: comandos, caminhos, portas, docs, limites. Só fatos, cada um com a fonte entre colchetes; o procedimento fica na skill. Dois arquivos, versionados no repo, lidos só pela skill (nunca carregam sozinhos):
 
@@ -28,11 +28,13 @@ Para cada seção faltando, nesta ordem, parando na primeira que responde: `CLAU
 
 ## 3. Confirmar
 
-Linhas `[inferido]` vão numa só `AskUserQuestion` para o dono. Sessão sem dono (subagente, `--autonomo`): ficam marcadas `[inferido]` e a resposta final as lista.
+Linhas `[inferido]` vão em `AskUserQuestion` para o dono: até 4 perguntas por chamada (2–4 opções cada), uma pergunta por seção do perfil com as linhas dela como opções (mais "outro"); passou de 4 seções, chamadas em sequência. Com `adiar`, ou em sessão sem dono (subagente): ficam marcadas `[inferido]` e a resposta final as lista; quem chamou pergunta.
 
 ## 4. Escrever
 
 Fatos, uma linha por fato, comandos entre crases e completos (com `<porta>`, `<slug>`, `<filtro>` onde a skill substitui). Nada que o `_comum.md` já diz: cite `_comum § Git`. Nada de procedimento ("primeiro faça X, depois Y"): isso é da skill. Alvo: `_comum.md` ≤ 40 linhas, `<skill>.md` ≤ 60; passou, o excesso vira um doc do repo apontado pelo perfil.
+
+Hook `prompt-graph`: `.claude/perfil/contexto.json` ausente e o repo tem glossário ou mapa de features (`_comum § Docs`) = escreva-o só com as chaves que diferem do padrão (`glossario`, `features`, `indice_features`, `codegraph`, `idioma`; padrões em `DEFAULTS` de `${CLAUDE_PLUGIN_ROOT}/scripts/prompt_graph.py`). Sem nenhuma das duas fontes: não crie o arquivo.
 
 Migração de skill antiga do projeto: depois que o perfil tem os fatos dela, `git rm -r .claude/skills/<skill>` (nome igual no projeto sombreia a skill do usuário). Scripts e harness que a skill antiga carregava vão para uma pasta do repo (`deploy/`, `tools/`, `scripts/`) e o perfil aponta para lá.
 
@@ -40,4 +42,4 @@ Migração de skill antiga do projeto: depois que o perfil tem os fatos dela, `g
 
 ## 5. Responder
 
-Seções escritas, seções `—`, linhas `[inferido]` não confirmadas. Commit só se o dono pedir ou se a skill chamadora manda (o `/wh:implementation` commita o perfil na branch da tarefa).
+Seções escritas, seções `—`, linhas `[inferido]` não confirmadas, e o hook: `contexto.json` escrito, já existente, ou "hook prompt-graph desligado: sem fontes (`/wh:adotar fontes` semeia glossário e mapa de features)". A skill chamadora lê os arquivos escritos com `Read` (a injeção `!cat` dela rodou antes). Commit só se o dono pedir ou se a skill chamadora manda (o `/wh:implementation` commita o perfil na branch da tarefa).

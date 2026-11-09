@@ -1,11 +1,11 @@
 ---
 name: limpeza
-description: Limpa os .md do repositório depois de uma execução — apaga planos, prompts e faixas executados, leva o que ficou aberto (dívida, pendência do dono, convenção, termo) para a casa certa e atualiza os .md que citam código que mudou; no fim commita e remove as worktrees locais. Use no fim do /wh:implementation, no fim de um plano ou quando pedirem "limpar os docs", "limpeza". Casas, permanentes e poda vêm de .claude/perfil/limpeza.md.
+description: Limpa os .md depois de uma execução: apaga planos executados, leva pendências à casa certa, atualiza docs que citam código mudado, remove as worktrees da execução. Use no fim do /wh:implementation ou para "limpar os docs".
 ---
 
 # Limpeza dos `.md`
 
-Perfil do projeto (injetado; `PERFIL_AUSENTE` = `Skill(wh:perfil, "limpeza")` antes de seguir):
+Perfil do projeto (injetado; `PERFIL_AUSENTE` = `Skill(wh:perfil, "limpeza")` e depois `Read` dos dois arquivos, porque a injeção abaixo rodou antes de o perfil existir):
 !`cat .claude/perfil/_comum.md .claude/perfil/limpeza.md 2>/dev/null || echo PERFIL_AUSENTE`
 
 Entrada: um `slug` do `/wh:implementation` (escopo = `<principal>...impl/<slug>` e a pasta de plano do perfil § Consumidos), ou uma lista de arquivos/pastas de plano e um intervalo de commits. Você trabalha na branch da execução; tudo vira um commit no formato do perfil § Commit.
@@ -29,7 +29,7 @@ Em cada `.md` consumido, o que **não** foi executado ou ficou como achado (item
 
 - Executado inteiro: `git rm` (ou `rm -r` fora do git, como a pasta de plano depois que o relatório existe). Em parte: só os itens feitos saem; o arquivo fica com o resto.
 - Pasta vazia sai; índice que apontava para o arquivo (README, `CLAUDE.md`, "sob demanda") perde a linha.
-- Poda do changelog pela regra do perfil § Poda.
+- Poda do changelog e dos relatórios de tarefa pela regra do perfil § Poda.
 - Fica sempre: a lista do perfil § Permanentes.
 
 **Feito quando nenhum `.md` executado inteiro existe e nenhum item feito sobra num `.md` parcial.**
@@ -46,11 +46,11 @@ Para cada `.md` afetado do passo 1: nome velho pelo novo, o apagado sai, a regra
 
 ## 6. Worktrees
 
-Cada worktree de `git worktree list --porcelain`, menos o checkout principal e a worktree onde você está:
+Só as worktrees **da execução** (`git worktree list --porcelain`): com `slug`, as de branch `impl/<slug>-*` e as de agente (`worktree-agent-*`) cujo HEAD é um commit de `<principal>..impl/<slug>` (a branch `worktree-agent-*` sai junto: `git branch -D`); sem ele, as de branch já mergeada em `HEAD` (`git branch --merged HEAD`). Qualquer outra (dono, outra sessão) fica como está e é listada na resposta. Para cada uma:
 
 - **Mudança não commitada** (`git -C <wt> status --porcelain` com saída): `git -C <wt> add -A`. Conteúdo já salvo quando `git -C <wt> diff --cached --quiet <ref> -- <arquivos do status>` passa para `<principal>` ou para `origin/<branch>`; aí a worktree segue direto para remoção. Senão, commit na branch da worktree no formato do perfil § Commit (detached HEAD: `git -C <wt> switch -c wt/<pasta>` antes).
-- **Remoção:** `git worktree remove <wt>`; `--force` só para mudança já salva em `<principal>` ou `origin/<branch>`; travada, `git worktree unlock <wt>` antes. A branch fica. No fim, `git worktree prune`.
+- **Remoção:** `git worktree remove <wt>`; `--force` só para mudança já salva em `<principal>` ou `origin/<branch>`; travada, `git worktree unlock <wt>` antes. A branch `impl/…` fica. No fim, `git worktree prune`.
 
-**Feito quando `git worktree list` mostra só o checkout principal e a worktree atual, e toda mudança das removidas está num commit, em `<principal>` ou em `origin/<branch>`.**
+**Feito quando nenhuma worktree da execução sobra em `git worktree list`, e toda mudança das removidas está num commit, em `<principal>` ou em `origin/<branch>`.**
 
 Resposta (≤ 8 linhas): apagados, parciais, achados movidos, `.md` atualizados, worktrees removidas (branch e commit novo, se houve).
