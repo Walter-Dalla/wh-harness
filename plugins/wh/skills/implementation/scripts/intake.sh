@@ -52,7 +52,7 @@ if [ $# -eq 0 ]; then
 else
   for tok in "$@"; do
     hit=
-    tok=${tok%%[,;:.!?)]}; tok=${tok#(}
+    while [[ $tok == *[,\;:.!?\)] ]]; do tok=${tok%?}; done; tok=${tok#(}
     if [[ $tok =~ ^P-[0-9]{3}$ ]]; then
       matches=()
       for f in "$dir/$tok"-*.md; do [ -f "$f" ] && matches+=("$f"); done

@@ -460,7 +460,7 @@ class ScriptsTest(unittest.TestCase):
         self.write('docs/pending/P-005-delta.md', '---\nid: P-005\nstatus: opened\n---\n')
         env = facts()
         self.assertEqual(env['PENDING'], f'{alpha} {gamma}')  # `status: opened` is not open
-        env = facts('P-001,', '(P-003)')
+        env = facts('P-001.,', '(P-003)')
         self.assertEqual((env['INTAKE'], env['PENDING']), ('file', f'{alpha} {gamma}'))  # punctuation around an id
         env = facts('next')
         self.assertEqual(env['INTAKE'], 'raw')  # the word `next` typed by the owner is raw text
