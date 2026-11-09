@@ -17,7 +17,7 @@ Only if profile § Disposable service exists. From the port range of `_common` �
 
 | Script | Who runs it | Does |
 |---|---|---|
-| `intake.sh <root> [<arg>…] \| next` | orchestrator, phase 1 (intake) and close (id of a new pending file) | reads the folder of `_common § Pending`; prints `PENDING_DIR=`, `INTAKE=file\|raw`, `PENDING=`, `SLUG=`, `INTAKE OK`; `next` prints only the next free `P-NNN`; `INTAKE FAILED` = stop |
+| `intake.sh <root> [<arg>…] \| --next` | orchestrator, phase 1 (intake) and close (id of a new pending file) | reads the folder of `_common § Pending`; prints `PENDING_DIR=`, `INTAKE=file\|raw`, `PENDING=`, `SLUG=`, `INTAKE OK`; `--next` prints only the next free `P-NNN`; `INTAKE FAILED` = stop |
 | `impl_env.sh <slug> [--main <b>] [--remote <r>]` | orchestrator, phase 1, once | checks root, main branch, clean status, remote, `pull --ff-only`; exclude lines, `.impl/<slug>/` folders (`qa/`, `retros/`, `progress/`, `acceptance/`, `agent_chat/`) and board, PR mode, CodeGraph sync, integration worktree; prints the task's `KEY=VALUE` facts; `ENV FAILED` = stop |
 | `board.sh <board> <who> <KIND> <text…>` | every agent, for every board line | appends `<date> | <who> | <KIND> | <text>` with a fresh UTC timestamp; one simple command (passes the worktree guard) |
 | `agent_chat.sh <impl> ask <lane> <item> <who> <text…> \| <file> answer <who> <impact> <text…>` | orchestrator when relaying a consultation; enricher (or orchestrator) when answering | `ask` creates `<impl>/agent_chat/NN-<lane>-<item>.md` (`## Question (<who>)`), `answer` appends `## Answer (<who>) · impact: <impact>`; both print only the file's absolute path; `AGENT_CHAT FAILED` on a missing folder or file, or an existing `NN` file |

@@ -3,16 +3,16 @@
 # resolves the pending files and the slug, or gives the next free pending id. `KEY=VALUE` lines on stdout.
 #
 #   intake.sh <root> [<P-NNN | path.md | text>…]    PENDING_DIR=, INTAKE=file|raw, PENDING=, SLUG=, INTAKE OK
-#   intake.sh <root> next                          P-NNN (highest id in the pending folder + 1)
+#   intake.sh <root> --next                        P-NNN (highest id in the pending folder + 1)
 #
 # Pending folder: the first backticked path of the `## Pending` section of <root>/.claude/profile/_common.md,
 # else docs/pending/; relative to <root>, created when missing. With no argument, every P-*.md whose first 10
-# lines hold `status: open`. Every token resolved (an id with exactly one P-NNN-*.md, or a .md inside the
+# lines hold the line `status: open`. Every token resolved (an id with exactly one P-NNN-*.md, or a .md inside the
 # folder) = file intake; any other token = raw intake, the resolved files listed as merge targets.
 set -u
 
 fail() { echo "INTAKE FAILED: $*"; exit 1; }
-usage() { echo "INTAKE FAILED: usage: intake.sh <root> [<P-NNN | path.md | text>…] | intake.sh <root> next"; exit 2; }
+usage() { echo "INTAKE FAILED: usage: intake.sh <root> [<P-NNN | path.md | text>…] | intake.sh <root> --next"; exit 2; }
 
 [ $# -ge 1 ] || usage
 [ -d "$1" ] || usage
@@ -30,7 +30,7 @@ case $rel in /*) dir=$rel ;; *) dir=$root/$rel ;; esac
 mkdir -p "$dir" || fail "cannot create $dir"
 dir=$(cd "$dir" && pwd -P) || fail "cannot enter $dir"
 
-if [ $# -eq 1 ] && [ "$1" = next ]; then
+if [ $# -eq 1 ] && [ "$1" = --next ]; then
   high=0
   for f in "$dir"/P-[0-9][0-9][0-9]*.md; do
     [ -e "$f" ] || continue
@@ -46,12 +46,13 @@ intake=file
 if [ $# -eq 0 ]; then
   for f in "$dir"/P-*.md; do
     [ -f "$f" ] || continue
-    head -n 10 "$f" | grep -q '^status: open' && found+=("$f")
+    head -n 10 "$f" | grep -qE '^status:[[:space:]]*open[[:space:]]*$' && found+=("$f")
   done
   [ ${#found[@]} -gt 0 ] || fail "no open pending file in $dir"
 else
   for tok in "$@"; do
     hit=
+    tok=${tok%%[,;:.!?)]}; tok=${tok#(}
     if [[ $tok =~ ^P-[0-9]{3}$ ]]; then
       matches=()
       for f in "$dir/$tok"-*.md; do [ -f "$f" ] && matches+=("$f"); done

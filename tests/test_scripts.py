@@ -456,11 +456,18 @@ class ScriptsTest(unittest.TestCase):
         self.assertEqual((env['INTAKE'], env['PENDING'], env['SLUG']), ('raw', '', '—'))
         env = facts()
         self.assertEqual((env['INTAKE'], env['PENDING'], env['SLUG']), ('file', f'{alpha} {gamma}', 'pending-001-003'))
-        self.assertEqual(run(intake, self.tmp, self.repo, 'next'), (0, 'P-004\n'))
+        self.assertEqual(run(intake, self.tmp, self.repo, '--next'), (0, 'P-004\n'))
+        self.write('docs/pending/P-005-delta.md', '---\nid: P-005\nstatus: opened\n---\n')
+        env = facts()
+        self.assertEqual(env['PENDING'], f'{alpha} {gamma}')  # `status: opened` is not open
+        env = facts('P-001,', '(P-003)')
+        self.assertEqual((env['INTAKE'], env['PENDING']), ('file', f'{alpha} {gamma}'))  # punctuation around an id
+        env = facts('next')
+        self.assertEqual(env['INTAKE'], 'raw')  # the word `next` typed by the owner is raw text
 
         empty = os.path.join(self.tmp, 'empty')
         os.makedirs(empty)
-        self.assertEqual(run(intake, self.tmp, empty, 'next'), (0, 'P-001\n'))
+        self.assertEqual(run(intake, self.tmp, empty, '--next'), (0, 'P-001\n'))
         self.assertTrue(os.path.isdir(os.path.join(empty, 'docs', 'pending')))
         code, out = run(intake, self.tmp, empty)
         self.assertEqual(code, 1, out)

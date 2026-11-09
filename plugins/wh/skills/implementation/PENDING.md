@@ -38,5 +38,5 @@ What the owner still decides, one `- <question>` per line; an answered one stays
 ## Who writes what
 - **Structurer** (`impl-structure`): the owner's raw request → files, in the integration worktree; the orchestrator commits them.
 - **Enricher**: confirms each line of Locations with `[code file:line]` and corrects the file in place.
-- **Close step**: resolved files leave the folder; open items become new files numbered by `${CLAUDE_PLUGIN_ROOT}/skills/implementation/scripts/intake.sh <root> next`.
+- **Close step**: resolved files leave the folder; open items become new files numbered by `${CLAUDE_PLUGIN_ROOT}/skills/implementation/scripts/intake.sh <intwt> --next`.
 - **Owner**: by hand, any time.

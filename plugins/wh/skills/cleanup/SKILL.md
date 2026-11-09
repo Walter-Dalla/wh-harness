@@ -21,7 +21,7 @@ Every **open finding has a home**, and only one: the table in profile § Homes; 
 
 ## 2. Save what is open
 
-In each consumed `.md`, what was **not** executed or remained as a finding (skipped item, partial, `HUMAN`, decision for later, "out of scope") goes to its home from profile § Homes, with the evidence in one line, if the home does not have it yet. A home in the folder of `_common § Pending` = a new pending file there (format `${CLAUDE_PLUGIN_ROOT}/skills/implementation/PENDING.md`), with the id from `${CLAUDE_PLUGIN_ROOT}/skills/implementation/scripts/intake.sh <root> next`. A status or open-item line the run resolved (check in the code) leaves.
+In each consumed `.md`, what was **not** executed or remained as a finding (skipped item, partial, `HUMAN`, decision for later, "out of scope") goes to its home from profile § Homes, with the evidence in one line, if the home does not have it yet. A home in the folder of `_common § Pending` = a new pending file there (format `${CLAUDE_PLUGIN_ROOT}/skills/implementation/PENDING.md`), with the id from `${CLAUDE_PLUGIN_ROOT}/skills/implementation/scripts/intake.sh <dir> --next` (`<dir>` = the worktree of the run's branch when it has one, where its new pending files live; else the repo root). A status or open-item line the run resolved (check in the code) leaves.
 
 **Done when every open item of the consumed files is in a home and no home lists something this run already resolved.**
 
