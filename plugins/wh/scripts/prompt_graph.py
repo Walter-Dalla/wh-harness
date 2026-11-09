@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Hook UserPromptSubmit: enriquece o prompt com ponteiros do glossário, do mapa de features e do CodeGraph.
+"""UserPromptSubmit hook: enriches the prompt with pointers from the glossary, the feature map and CodeGraph.
 
-Determinístico e sem rede. O projeto declara as fontes em `.claude/perfil/contexto.json`; sem esse arquivo o hook
-não faz nada. O grafo (termo -> feature -> símbolo) fica em cache em ~/.cache/walter-harness e só é refeito quando
-uma fonte muda.
+Deterministic and offline. The project declares its sources in `.claude/profile/context.json`; without that file the
+hook does nothing. The graph (term -> feature -> symbol) is cached in ~/.cache/walter-harness and only rebuilt when
+a source changes.
 
-Uso manual:
-  prompt_graph.py --query "texto" [--root DIR] [--explain]   # mostra o que seria injetado
-  prompt_graph.py --build [--root DIR]                       # força a reconstrução do cache
+Manual use:
+  prompt_graph.py --query "text" [--root DIR] [--explain]    # shows what would be injected
+  prompt_graph.py --build [--root DIR]                       # forces the cache rebuild
 """
 import glob
 import hashlib
@@ -19,7 +19,7 @@ import sqlite3
 import sys
 import unicodedata
 
-CONFIG = os.path.join('.claude', 'perfil', 'contexto.json')
+CONFIG = os.path.join('.claude', 'profile', 'context.json')
 CACHE_DIR = os.environ.get('WH_CACHE_DIR') or os.path.join(os.path.expanduser('~'), '.cache', 'walter-harness')
 GRAPH_VERSION = 2
 MAX_NGRAM = 5
@@ -46,23 +46,23 @@ LABELS = {
            'avoid': 'Avoid "%s": the term is %s (%s)', 'terms': 'Terms', 'read': 'Read', 'near': 'Interacts with',
            'symbols': 'Symbols'},
 }
-# Nomes de seção aceitos (PT e EN); o contexto.json pode trocar por outros.
+# Accepted section names (PT and EN); context.json may replace them.
 SECTIONS = {
     'simbolos': ['Símbolos de entrada', 'Entry symbols'],
     'interacoes': ['Interações', 'Interactions'],
     'armadilhas': ['Armadilhas', 'Pitfalls'],
 }
-# Peso de cada tipo de aresta alias -> feature.
+# Weight of each kind of alias -> feature edge.
 W_KEYWORD, W_ALIAS, W_SYMBOL, W_GLOSS = 3.0, 3.0, 2.0, 1.0
 KIND_RANK = {'class': 0, 'interface': 1, 'struct': 1, 'enum': 1, 'route': 2, 'method': 3, 'property': 4,
              'constant': 5, 'enum_member': 6, 'field': 6, 'function': 3}
 BACKTICK = re.compile(r'`([^`]+)`')
-# Pasta ou arquivo de teste: tests/, spec/, __tests__/, *Tests.cs, *.test.ts, *_test.go…
+# Test folder or file: tests/, spec/, __tests__/, *Tests.cs, *.test.ts, *_test.go…
 TEST_PATH = re.compile(r'(^|/)(tests?|specs?|__tests__)(/|$)|(tests?|spec)\.[a-z]+$|_test\.[a-z]+$', re.I)
 IDENT = re.compile(r'^[A-Za-z_][A-Za-z0-9_.]*$')
 
 
-# ---------- normalização ----------
+# ---------- normalization ----------
 
 def _stem(tok):
     for suf, rep in (('oes', 'ao'), ('aes', 'ao'), ('ais', 'al'), ('eis', 'el'), ('ns', 'm')):
@@ -88,7 +88,7 @@ def clean_md(text):
     return re.sub(r'\*\*|__', '', text).strip()
 
 
-# ---------- parse das fontes ----------
+# ---------- source parsing ----------
 
 def split_row(line):
     cells, buf, tick = [], [], False
@@ -105,7 +105,7 @@ def split_row(line):
 
 
 def split_keywords(cell):
-    """Separa por vírgula e por parênteses, sem cortar o que está entre crases."""
+    """Splits on commas and parentheses, without cutting what is inside backticks."""
     parts, buf, tick = [], [], False
     for ch in cell:
         if ch == '`':
@@ -147,7 +147,7 @@ def parse_glossary(path, pitfalls):
         if not line.startswith('|') or sep.match(line):
             continue
         if n + 1 < len(lines) and sep.match(lines[n + 1]):
-            continue  # cabeçalho da tabela
+            continue  # table header
         cells = split_row(line)
         if len(cells) < 2:
             continue
@@ -236,13 +236,13 @@ def resolve_symbols(root, cfg, names):
     return found
 
 
-# ---------- grafo ----------
+# ---------- graph ----------
 
 def build_graph(root, cfg):
     gloss_path = os.path.join(root, cfg['glossario'])
     entries = parse_glossary(gloss_path, cfg['secoes']['armadilhas']) if os.path.exists(gloss_path) else []
     feats = parse_features(root, cfg)
-    index = {}  # chave -> [[tipo, id, peso]]
+    index = {}  # key -> [[type, id, weight]]
 
     def add(k, typ, ident, w):
         if k and len(k) >= 3:
@@ -255,7 +255,7 @@ def build_graph(root, cfg):
             add(key(a), 'f', name, W_ALIAS)
         for s in f['simbolos']:
             add(key(s), 'f', name, W_SYMBOL)
-    # Evite só vale quando a palavra não é termo próprio de outra linha.
+    # An Avoid alias only counts when the word is not a proper term of another row.
     proper = {a[0] for e in entries for a in e['aliases'] if a[1] != 'evite'}
     gloss2feat = []
     for i, e in enumerate(entries):
@@ -312,11 +312,11 @@ def load_graph(root, cfg, force=False):
             json.dump(data, fh, ensure_ascii=False, separators=(',', ':'))
         os.replace(tmp, cache)
     except OSError:
-        pass  # cache sem escrita (home só-leitura, sandbox): o grafo vale só para este prompt
+        pass  # cache not writable (read-only home, sandbox): the graph serves only this prompt
     return data
 
 
-# ---------- consulta ----------
+# ---------- query ----------
 
 def match(graph, prompt):
     toks = tokens(prompt)
@@ -380,7 +380,7 @@ def render(graph, cfg, prompt, explain=False):
         near = [n for n in fs[chosen[0]]['interage'] if n not in chosen]
         if near:
             lines.append(lb['near'] + ': ' + ', '.join(n[:-3] for n in near[:cfg['max_interage']]))
-    # Símbolo citado no prompt primeiro, depois os de entrada das features, alternando entre elas.
+    # Symbols cited in the prompt first, then the features' entry symbols, alternating between them.
     cited = [s for s in graph['simbolos'] if key(s) in hits]
     queues = [list(graph['features'][f]['simbolos']) for f in chosen]
     order = cited + [q.pop(0) for _ in range(8) for q in queues if q]
@@ -395,7 +395,7 @@ def render(graph, cfg, prompt, explain=False):
         out = ''
     else:
         out = '[wh:prompt-graph] ' + lb['head']
-        for line in lines:  # só linhas inteiras dentro do teto; a primeira que não cabe é cortada, as outras saem
+        for line in lines:  # only whole lines within the cap; the first that does not fit is cut, the rest dropped
             if len(out) + 1 + len(line) <= cfg['max_chars']:
                 out += '\n' + line
             else:
@@ -408,7 +408,7 @@ def render(graph, cfg, prompt, explain=False):
     return out
 
 
-# ---------- entrada ----------
+# ---------- entry point ----------
 
 def find_root(start):
     cur = os.path.abspath(start)
@@ -435,11 +435,11 @@ def main(argv):
         args = dict(zip(rest[0::2], rest[1::2]))
         root = find_root(args.get('--root', '.'))
         if not root:
-            sys.exit('sem %s' % CONFIG)
+            sys.exit('no %s' % CONFIG)
         cfg = load_cfg(root)
         graph = load_graph(root, cfg, force='--build' in argv)
         if '--build' in argv:
-            print('grafo: %d chaves, %d features, %d termos, %d símbolos' % (
+            print('graph: %d keys, %d features, %d terms, %d symbols' % (
                 len(graph['index']), len(graph['features']), len(graph['glossario']), len(graph['simbolos'])))
         if '--query' in args:
             print(render(graph, cfg, args['--query'], explain='--explain' in argv))
@@ -466,7 +466,7 @@ def main(argv):
 if __name__ == '__main__':
     try:
         main(sys.argv)
-    except Exception as exc:  # hook nunca bloqueia o prompt
+    except Exception as exc:  # the hook never blocks the prompt
         if '--query' in sys.argv or '--build' in sys.argv:
             raise
         sys.stderr.write('prompt_graph: %s\n' % exc)

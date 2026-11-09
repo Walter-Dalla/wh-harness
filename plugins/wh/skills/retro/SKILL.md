@@ -1,29 +1,29 @@
 ---
 name: retro
-description: Retrospectiva de uma sessão: candidatos a melhorar o ambiente do agente, por severidade, sem aplicar nada. Use para "retro" ou, pelos agentes do /wh:implementation, com "arquivo: <caminho>".
+description: Retrospective of a session: candidates to improve the agent's environment, by severity, nothing applied. Use for "retro" or, from the /wh:implementation agents, with "file: <path>".
 ---
 
 # Retro
 
-Você sugere melhorias no **ambiente** do agente (docs, checks, skills, ferramentas) para as próximas execuções. Nada é aplicado: a saída é uma lista de candidatos.
+You suggest improvements to the agent's **environment** (docs, checks, skills, tools) for the next runs. Nothing is applied: the output is a list of candidates.
 
-Argumento: nada (apresente ao usuário no chat) ou `arquivo: <caminho>` (grave lá, no formato de `${CLAUDE_PLUGIN_ROOT}/skills/implementation/RELATORIO.md` § Retro: ≤ 40 linhas, ≤ 6 candidatos, uma tabela; caminho fora da sua worktree de agente: `Write` é recusado, grave pelo Bash com `cat > <caminho> <<'EOF'`). Pode citar uma sessão; sem isso, a atual, de memória, sem reler logs grandes.
+Argument: none (present to the user in the chat) or `file: <path>` (write it there, in the format of `${CLAUDE_PLUGIN_ROOT}/skills/implementation/REPORT.md` § Retro: ≤ 40 lines, ≤ 6 candidates, one table; path outside your agent worktree: `Write` is refused, write through Bash with `cat > <path> <<'EOF'`). It may name a session; otherwise the current one, from memory, without rereading large logs.
 
-## Passos
+## Steps
 
-1. Procure candidatos nestas categorias, cada um com a evidência (o que aconteceu, comando ou arquivo):
-   - **Navegação:** demorou para achar um arquivo ou uma dependência escondida entre arquivos. Proposta: um ponteiro de navegação (`CLAUDE.md`/`AGENTS.md`, perfil `_comum § Navegação`, índice).
-   - **Checagem automática:** erro que lint, typecheck, teste ou linter de arquivos pegaria. Leia antes o check que o repo já tem (`package.json`, build, CI): check existente desligado ou quebrado é o achado, não uma reinvenção. Repo sem guardrail (nem pre-commit nem CI rodando lint/typecheck/teste) é achado por si.
-   - **Padrão de código:** regra que o QA de código deveria cobrar, ou regra existente a tirar ou esclarecer. Violação **mecânica** (padrão sintático, API banida, forma de import, lugar do arquivo) vira check determinístico (regra no linter do repo, pre-commit, job de CI), nunca texto. Texto de regra só para juízo (consistência entre arquivos, "parece com o vizinho").
-   - **Steering doc:** instrução do `CLAUDE.md`/`AGENTS.md` (repo ou global) que devia ser check ou regra de QA; arquivo grande demais.
-   - **Economia de ferramenta:** chamada cara que dava para encurtar; CLI ou MCP que gasta token demais.
-   - **No-op:** instrução de steering que não muda o comportamento.
-   - **Acesso a informação:** informação crucial que o agente não tinha (log do servidor, leitura de serviço externo).
-2. Severidade por custo do problema na sessão. Cada candidato: categoria, evidência, proposta (arquivo e mudança) e quem aplica (repo / dono, fora do repo).
-3. Apresente ao usuário em ordem de severidade, ou grave no arquivo do argumento.
+1. Look for candidates in these categories, each with its evidence (what happened, command or file):
+   - **Navigation:** it took long to find a file or a dependency hidden across files. Proposal: a navigation pointer (`CLAUDE.md`/`AGENTS.md`, profile `_common § Navigation`, index).
+   - **Automatic check:** an error lint, typecheck, a test or a file linter would catch. First read the check the repo already has (`package.json`, build, CI): an existing check turned off or broken is the finding, not a reinvention. A repo with no guardrail (neither pre-commit nor CI running lint/typecheck/tests) is a finding by itself.
+   - **Code standard:** a rule the code QA should enforce, or an existing rule to remove or clarify. A **mechanical** violation (syntactic pattern, banned API, import form, file location) becomes a deterministic check (rule in the repo's linter, pre-commit, CI job), never text. Rule text only for judgment (consistency across files, "looks like its neighbor").
+   - **Steering doc:** an instruction in `CLAUDE.md`/`AGENTS.md` (repo or global) that should be a check or a QA rule; a file that is too large.
+   - **Tool economy:** an expensive call that could be shorter; a CLI or MCP that burns too many tokens.
+   - **No-op:** a steering instruction that does not change behavior.
+   - **Information access:** crucial information the agent did not have (server log, reading an external service).
+2. Severity by the cost of the problem in the session. Each candidate: category, evidence, proposal (file and change) and who applies it (repo / owner, outside the repo).
+3. Present to the user in severity order, or write to the file from the argument.
 
-## Referência
+## Reference
 
-- O agente de implementação tem a maior pressão de contexto (explora, escreve, depura); o QA recebe um diff e tem a menor. Regra de padrão é cobrada no QA, não carregada no implementador.
-- `CLAUDE.md`/`AGENTS.md` entram no contexto de todo agente: só ponteiros de navegação. Regras moram em docs apontados (perfil `_comum § Docs`); procure um doc existente antes de criar outro.
-- Skill serve para doc cuja descrição precisa estar no contexto, ou para comando do usuário.
+- The implementation agent has the highest context pressure (explores, writes, debugs); the QA receives a diff and has the lowest. A standards rule is enforced in the QA, not loaded into the implementer.
+- `CLAUDE.md`/`AGENTS.md` enter every agent's context: navigation pointers only. Rules live in docs pointed at (profile `_common § Docs`); look for an existing doc before creating another.
+- A skill fits a doc whose description must be in context, or a user command.

@@ -1,0 +1,61 @@
+# Large task: parallel `impl-dev` lanes
+
+Each lane = one `impl-dev` subagent in its own worktree and its own branch (`impl/<slug>-<lane>`, on the remote at every commit). The enricher writes the lanes (§1); you dispatch, merge and validate; you write code only when fixing a merge.
+
+## 1. Split into lanes (the enricher does it, in the `plan` stage)
+
+The balance is **parallelism × context reuse × tokens**:
+
+- **Same place, same developer.** Items in the same file, the same invariant, the same contract or the same module go in one lane, in dependency order: the second item reuses what the first already read. A refactor goes in the same lane as (and before) the feature that touches the same code.
+- **Parallel only where nothing overlaps.** Lanes of the same wave own disjoint files. Union files (profile § Union files) may belong to several: each lane only appends, you resolve at merge.
+- **Contract in waves.** The producing lane owns the contract in one wave; the consumer in a following wave.
+- **Size.** An observable measure, not tokens: items, files in `Owns:` and the line count of each (a contract item or a large file weighs double).
+- **Limit.** At most 3 subagents running (`SKILL.md` § Subagent limit): a wave has at most 3 lanes in parallel (one profile port per lane), and the code QA of a finished lane also takes a slot; a larger wave becomes smaller waves, or the extra lanes wait for a slot.
+  - **Ceiling:** ≤ 6 items and ≤ 15 files (or ~5k lines) per lane. Above that, split the lane at the point of least coupling (items in series become two lanes in consecutive waves).
+  - **Floor:** a lane with fewer than 3 items is too small (it pays the fixed cost of instructions, tools and index for little work): join it to the neighbor it shares files with, or put the item in the next wave of another lane.
+
+A lane = `<root>/.impl/<slug>/<lane>.md`; the agent does not see this conversation, so everything it needs is here. The paths of `Owns:`, `May touch` and `Union:` go in backticks: `scripts/scope.sh` reads them (`Union:` copies profile § Union files; a path ending in `/` means the whole folder). Every file an item says to change enters one of these lines, including what the item text cites only in prose; a consultation answer that widens the scope updates the line.
+
+**Acceptance at the tip:** before writing the lane, run each item's Acceptance at the tip the wave is born from (the main branch in `plan`; afterwards, `impl/<slug>`), with the disposable service if it needs one. Red = the item goes in; green = the item is already done or the Acceptance does not prove it: it leaves the plan with the proof in `PLAN.md`, or the Acceptance is rewritten (refactor item: green before is expected, the item stays). An Acceptance the worktree guard refuses (`ENVIRONMENT.md` § Bash in the agent worktree: environment variable in front, `env`, swapped `HOME`, loop): rewrite it in a form that passes (the test sets up its own environment); if that is impossible, mark the item "Acceptance clone only" and give the lane a second command, which runs in the worktree, for the developer to close the item. `Owns:` comes from the files each item says to change, never from an earlier list; skill and agent files enter like any other file. A count (lines, occurrences, parameters) goes as the command that measures it, never the number; the Acceptance of a removed path is `git grep -n <path>` with no extension filter.
+
+```markdown
+# <lane> · <slug> · wave W<n> · port <from the profile or —> · <n> items · <m> files (~<lines>)
+Context: <the enriched request and the decisions that touch this lane>.
+Owns: `<path or glob>` `<…>` (symbols apart). May touch the minimum of: `<path of another lane>` (or "—"). Union: `<glob>` `<…>` (or "—").
+Pair: <lane that consumes or supplies a contract, or "—">.
+## <id> · <title> · internal|contract
+<what to change, symbols and file:line from the enrichment, rule that applies>. Acceptance: `<command>`.
+```
+
+In `PLAN.md`, add the table `| Wave | Lane | Items | Port | Files (lines) |`. Create `<root>/.impl/<slug>/BOARD.md` empty (the folders `qa/`, `retros/`, `progress/` and `acceptance/` the orchestrator created in phase 1).
+
+## 2. Dispatch
+
+Commit and push `impl/<slug>` before the first wave (it is the base). Before each wave, the base is the real tip of `impl/<slug>` (`git rev-parse impl/<slug>`), with the previous wave fully merged and green. Before each wave after the first, the plan has aged: send the enricher "Stage: consult. WAVE W<n> at tip <hash>: Acceptances, CONTRACT lines of the board, moved files"; it runs the Acceptances at the tip, removes the green items from the lanes and appends to each lane file the `CONTRACT` lines of the board it consumes and the files that moved. Note on the board `orchestrator | WAVE | W<n> base <hash>`. Dispatch respecting the limit of 3 live subagents (`SKILL.md` § Subagent limit): the next lane or QA only when an agent has finished. Prompt of each agent:
+
+```text
+PLUGIN_ROOT=${CLAUDE_PLUGIN_ROOT}
+Lane: <lane>. File: <root>/.impl/<slug>/<lane>.md. Repo: <root>. Profile: <root>/.claude/profile/implementation.md and _common.md.
+Branch: impl/<slug>-<lane>. Base: impl/<slug> @ <hash>. Remote: <remote>.
+Commands: profile § Worktree commands before the 1st command; git = <absolute path from phase 1> -C <worktree> …, one command per call.
+Port: <port or —>. Board: <root>/.impl/<slug>/BOARD.md.
+Retro: <root>/.impl/<slug>/retros/<lane>.md. Checkpoint: <root>/.impl/<slug>/progress/<lane>.md.
+Continuation: <"from scratch" | previous checkpoint + branch to continue from + what changed in the base or the lane since then>.
+```
+
+`Agent(subagent_type: "wh:impl-dev", isolation: "worktree", model: <profile § Models; no rule, "opus">, prompt: …)`, **without `name`** (with a name it becomes an agent-team teammate). Keep each lane's agent id (fixes and answers go back to it). While they run, wait for the reports; you read the diffs at merge.
+
+**Question bridge:** a `QUESTION …` message from a lane = a consultation to the enricher (phase 2 of `SKILL.md`, "Consultations during the task"), answer to the lane's id. A `WAITING: …` report = the same consultation; the answer resumes the lane.
+
+## 3. Code QA, merge and validate (per lane, in wave order)
+
+1. **State and scope:** the state of the lane's report decides. `DONE` (evidence per item) or `HUMAN_DECISION`: go on through the steps below with what got done; the `HUMAN` line goes to the report. `PARTIAL` with every item committed and only verification pending (Acceptance "clone only", command the guard refused; `WARNING` line on the board): run the verification yourself in the lane's worktree, or in the clone at the tip of its branch; green = goes on as `DONE`, red = back to the agent as `FAILED`. `PARTIAL` with an item left to do, or `BLOCKED`: step 9. `WAITING`: consultation to the enricher (§2, Question bridge); the answer resumes the lane. `FAILED`: never merge; return to the same agent (`SendMessage`) the red from its report, and a second failure becomes a FIX lane or an open item of the report. Then `${CLAUDE_PLUGIN_ROOT}/skills/implementation/scripts/scope.sh <lane.md> <base> <remote>/impl/<slug>-<lane>` with no `OUTSIDE:` (otherwise the lane fixes it, `SendMessage`).
+2. **Code QA** (phase 4 of `SKILL.md`) as soon as the lane delivers: `impl-qa` mode `code` on `impl/<slug>-<lane>`, base = the hash the lane started from, with the diff written beforehand (phase 4 template). It runs while the other lanes of the wave still work.
+3. **Lane fixes:** the bug, standard or name findings go back to the **same** `impl-dev` (`SendMessage` with the agent id returned at spawn: it resumes with the lane's context), with the list of ids and the QA file; it makes one commit per finding and pushes. A fix that needs a file outside `Owns:`: add the path, in backticks, to `May touch` in the lane file before sending (`scope.sh` runs again at merge). Then the retest by the rule of phase 4 of `SKILL.md` (agent only with a critical, high or medium code finding). A resumed agent that no longer finds its own worktree (removed): continuation through step 9.
+4. **Lane files:** retro, checkpoint and QA output are already in `<root>/.impl/<slug>/` (absolute paths from the prompt); check that the retro exists. What an agent returned in its answer because the write was refused, you write.
+5. **Merge:** `git fetch <remote>` and `git merge --no-ff <remote>/impl/<slug>-<lane> -m "impl: <lane>"` on `impl/<slug>`; note on the board `orchestrator | MERGE | <lane> → <hash>`.
+6. **Conflict:** resolve keeping the intent of both lanes (from each one's report); union file = both lists of lines. A conflict that requires rewriting logic: abort the merge and tell the lane that came second (`SendMessage`) to "rebase on impl/<slug> and resolve <files>".
+7. **Quick review:** `git diff --stat`; no received contract fixture or test junk. A fixture touched by two lanes of the wave: the second one runs again through profile § Contract at integration and you review the diff.
+8. **End of wave:** the profile's build and suite at the tip of `impl/<slug>`, then push (a wave of a single lane, merged without conflict: the suite the lane ran at its end counts; build only). A protected doc (profile § Protected files) the wave left outdated, you fix here with the lanes' notes, in its own commit. Expensive checks and visual/e2e QA wait for the final QA (phase 5). Green: next wave (the new base is this hash). Red: a one-line fix you make in its own commit (`<slug>-fix: …`); otherwise the guilty lane fixes it (`SendMessage`).
+9. **Partial or blocked lane:** `BLOCKED` = fix the environment. Continuation = a new agent with the same prompt + its checkpoint, base = tip of its branch, and what changed since then. Before dispatching it, free the branch name (the old worktree holds it, and the new agent's `git branch -m` would fail): in the old worktree (`git worktree list --porcelain`), an uncommitted change becomes a `wip: <lane>` commit and push; check that `git rev-parse impl/<slug>-<lane>` and `git rev-parse <remote>/impl/<slug>-<lane>` give the same hash; then `git worktree remove --force <old worktree>` and `git branch -D impl/<slug>-<lane>` (the branch stays on the remote). The code QA runs after the continuation.
+10. `HUMAN` lines and `BLOCKED` states on the board, and a lane that delivered no retro: note them for the report; never wait.

@@ -1,8 +1,8 @@
 """Section references inside the plugin point at sections that exist.
 
-- `perfil § X` / `_comum § X` names, in full, a `## X` section of the matching profile template
-  (a prefix such as `perfil § QA` for `## QA visual ou e2e` fails), including chained `e § Y`.
-- `ARQUIVO.md § X` names a `## X` heading (or a `**X:**` label) of that plugin file; `§N` a `## N.` heading.
+- `profile § X` / `_common § X` names, in full, a `## X` section of the matching profile template
+  (a prefix such as `profile § QA` for `## Visual or e2e QA` fails), including chained `and § Y`.
+- `FILE.md § X` names a `## X` heading (or a `**X:**` label) of that plugin file; `§N` a `## N.` heading.
 
     python3 -m unittest discover -s tests
 """
@@ -13,9 +13,9 @@ import unittest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PLUGIN = os.path.join(ROOT, 'plugins', 'wh')
-REF = re.compile(r'(perfil|Perfil|_comum)`?\s+§\s+')
-CHAIN = re.compile(r'^(?:\s*\([^)]*\))?\s*(?:,|e|ou)\s+§\s+')
-PLACEHOLDER = re.compile(r'^(X\b|<|Seção)')
+REF = re.compile(r'(profile|Profile|_common)`?\s+§\s+')
+CHAIN = re.compile(r'^(?:\s*\([^)]*\))?\s*(?:,|and|or)\s+§\s+')
+PLACEHOLDER = re.compile(r'^(X\b|<|Section)')
 FILE_REF = re.compile(r'([A-Z]+\.md)`(?:\]\([^)]*\))?\s+§\s*')
 
 
@@ -43,36 +43,36 @@ def named(rest, pool):
 
 
 def template_for(path):
-    """PERFIL.md of the skill that owns the file; agents and implementation helpers use implementation's."""
+    """PROFILE.md of the skill that owns the file; agents and implementation helpers use implementation's."""
     rel = os.path.relpath(path, PLUGIN).replace(os.sep, '/')
     skill = rel.split('/')[1] if rel.startswith('skills/') else 'implementation'
-    return os.path.join(PLUGIN, 'skills', skill, 'PERFIL.md')
+    return os.path.join(PLUGIN, 'skills', skill, 'PROFILE.md')
 
 
 def plugin_docs():
     for path in sorted(glob.glob(os.path.join(PLUGIN, '**', '*.md'), recursive=True)):
-        if os.path.basename(path) not in ('PERFIL.md', 'COMUM.md'):
+        if os.path.basename(path) not in ('PROFILE.md', 'COMMON.md'):
             with open(path, encoding='utf-8') as fh:
                 yield path, list(enumerate(fh, 1))
 
 
 class RefsTest(unittest.TestCase):
     def test_named_requires_the_full_section_name(self):
-        pool = ['QA visual ou e2e', 'Testes', 'Leitura do enriquecedor']
-        self.assertIsNone(named('QA (se houver)', pool))
-        self.assertIsNone(named('Leitura que a faixa toca', pool))
-        self.assertEqual(named('QA visual ou e2e não for', pool), 'QA visual ou e2e')
-        self.assertEqual(named('Testes e § Checks', pool), 'Testes')
+        pool = ['Visual or e2e QA', 'Tests', 'Enricher reading']
+        self.assertIsNone(named('Visual (if any)', pool))
+        self.assertIsNone(named('Enricher notes the lane touches', pool))
+        self.assertEqual(named('Visual or e2e QA is not', pool), 'Visual or e2e QA')
+        self.assertEqual(named('Tests and § Checks', pool), 'Tests')
 
     def test_every_profile_reference_names_a_template_section(self):
-        comum = headings(os.path.join(PLUGIN, 'skills', 'perfil', 'COMUM.md'))
+        common = headings(os.path.join(PLUGIN, 'skills', 'profile', 'COMMON.md'))
         bad = []
         for path, lines in plugin_docs():
             tpl = template_for(path)
             own = headings(tpl) if os.path.exists(tpl) else []
             for n, line in lines:
                 for m in REF.finditer(line):
-                    pool = comum if m.group(1) == '_comum' else own
+                    pool = common if m.group(1) == '_common' else own
                     pos = m.end()
                     while True:
                         rest = line[pos:]
@@ -98,7 +98,7 @@ class RefsTest(unittest.TestCase):
                     if not os.path.exists(target):
                         target = os.path.join(PLUGIN, 'skills', 'implementation', m.group(1))
                     if not os.path.exists(target):
-                        continue  # arquivo de fora do plugin (docs do repo)
+                        continue  # file outside the plugin (repo docs)
                     rest = line[m.end():]
                     num = re.match(r'\d+', rest)
                     if num:

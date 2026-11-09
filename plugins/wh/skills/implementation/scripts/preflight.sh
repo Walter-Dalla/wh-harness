@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Preflight de um subagente do /wh:implementation (impl-dev, impl-qa), ANTES de qualquer
-# git reset/branch: confere o ambiente e para sem tocar em nada se algo não bate.
-# Uso: preflight.sh --base <hash> [--branch <impl/slug-faixa>] [--port <porta>] [--lane <arquivo da faixa>] [--protected <main,release/*>]
-# Saída: "PREFLIGHT OK" (exit 0) ou uma linha "PREFLIGHT FALHOU: …" por problema (exit 1).
+# Preflight of a /wh:implementation subagent (impl-dev, impl-qa), BEFORE any
+# git reset/branch: checks the environment and stops without touching anything if something is off.
+# Usage: preflight.sh --base <hash> [--branch <impl/slug-lane>] [--port <port>] [--lane <lane file>] [--protected <main,release/*>]
+# Output: "PREFLIGHT OK" (exit 0) or one "PREFLIGHT FAILED: …" line per problem (exit 1).
 set -u
 base='' branch='' port='' lane='' protected='main,master,develop'
 while [ $# -gt 0 ]; do
   case "$1" in --base|--branch|--port|--lane|--protected)
-    [ $# -ge 2 ] || { echo "PREFLIGHT FALHOU: $1 sem valor"; exit 2; } ;;
+    [ $# -ge 2 ] || { echo "PREFLIGHT FAILED: $1 without a value"; exit 2; } ;;
   esac
   case "$1" in
     --base) base=$2; shift 2 ;;
@@ -15,64 +15,64 @@ while [ $# -gt 0 ]; do
     --port) port=$2; shift 2 ;;
     --lane) lane=$2; shift 2 ;;
     --protected) protected="$protected,$2"; shift 2 ;;
-    *) echo "PREFLIGHT FALHOU: argumento desconhecido: $1"; exit 2 ;;
+    *) echo "PREFLIGHT FAILED: unknown argument: $1"; exit 2 ;;
   esac
 done
 
 fail=0
-err() { echo "PREFLIGHT FALHOU: $*"; fail=1; }
+err() { echo "PREFLIGHT FAILED: $*"; fail=1; }
 
-top=$(git rev-parse --show-toplevel 2>/dev/null) || { echo "PREFLIGHT FALHOU: fora de um repositório git"; exit 1; }
+top=$(git rev-parse --show-toplevel 2>/dev/null) || { echo "PREFLIGHT FAILED: outside a git repository"; exit 1; }
 gitdir=$(cd "$top" && git rev-parse --absolute-git-dir)
 common=$(cd "$top" && git rev-parse --path-format=absolute --git-common-dir)
 
-# Worktree de agente: nunca o checkout principal.
-[ "$gitdir" != "$common" ] || err "não é uma worktree de agente: $top é o checkout principal"
+# Agent worktree: never the main checkout.
+[ "$gitdir" != "$common" ] || err "not an agent worktree: $top is the main checkout"
 
-# Branch: a worktree recém-criada (prefixo do isolation "worktree" do Claude Code, hoje worktree-agent-; WH_AGENT_BRANCH_PREFIX troca) ou a branch da faixa (retomada).
+# Branch: the freshly created worktree (prefix of Claude Code's "worktree" isolation, today worktree-agent-; WH_AGENT_BRANCH_PREFIX overrides) or the lane branch (resumption).
 prefix=${WH_AGENT_BRANCH_PREFIX:-worktree-agent-}
 cur=$(git branch --show-current)
 case "$cur" in
   "$prefix"*) ;;
-  '') err "HEAD solto" ;;
-  *) [ -n "$branch" ] && [ "$cur" = "$branch" ] || err "branch atual '$cur' não é ${prefix}* nem a esperada '${branch:-<nenhuma>}'" ;;
+  '') err "detached HEAD" ;;
+  *) [ -n "$branch" ] && [ "$cur" = "$branch" ] || err "current branch '$cur' is not ${prefix}* nor the expected '${branch:-<none>}'" ;;
 esac
 if [ -n "$branch" ]; then
   IFS=',' read -ra prot <<< "$protected"
   # shellcheck disable=SC2053
-  for p in "${prot[@]}"; do [[ $branch == $p ]] && err "branch esperada protegida: $branch"; done
+  for p in "${prot[@]}"; do [[ $branch == $p ]] && err "expected branch is protected: $branch"; done
 fi
 
-# Nada local que não pertença à tarefa (o reset --hard apagaria).
+# Nothing local that does not belong to the task (the reset --hard would delete it).
 dirty=$(git status --porcelain --untracked-files=normal)
-[ -z "$dirty" ] || err "alterações locais na worktree (o reset as apagaria): $(echo "$dirty" | head -5 | tr '\n' ' ')"
+[ -z "$dirty" ] || err "local changes in the worktree (the reset would delete them): $(echo "$dirty" | head -5 | tr '\n' ' ')"
 
-# Base existe; numa retomada, a ponta atual já contém a base.
-if [ -z "$base" ]; then err "--base ausente"
-elif ! git cat-file -e "$base^{commit}" 2>/dev/null; then err "base $base não existe no repositório"
+# The base exists; on a resumption, the current tip already contains the base.
+if [ -z "$base" ]; then err "--base missing"
+elif ! git cat-file -e "$base^{commit}" 2>/dev/null; then err "base $base does not exist in the repository"
 fi
 
-# Porta livre (serviço descartável da faixa ou do QA final).
-port_busy() {  # 0 ocupada, 1 livre, 2 sem ferramenta para conferir
+# Free port (disposable service of the lane or of the final QA).
+port_busy() {  # 0 busy, 1 free, 2 no tool to check
   if command -v ss >/dev/null 2>&1; then ss -ltnH "sport = :$1" 2>/dev/null | grep -q .
   elif command -v lsof >/dev/null 2>&1; then lsof -nP -iTCP:"$1" -sTCP:LISTEN >/dev/null 2>&1
   else return 2; fi
 }
 if [ -n "$port" ] && [ "$port" != "—" ]; then
   port_busy "$port"; case $? in
-    0) err "porta $port ocupada" ;;
-    2) echo "PREFLIGHT AVISO: sem ss nem lsof; porta $port não conferida" ;;
+    0) err "port $port busy" ;;
+    2) echo "PREFLIGHT WARNING: neither ss nor lsof; port $port not checked" ;;
   esac
 fi
 
-# Arquivo da faixa e o quadro ao lado dele.
+# Lane file and the board beside it.
 if [ -n "$lane" ]; then
-  [ -r "$lane" ] || err "arquivo da faixa ilegível: $lane"
-  [ -e "$(dirname "$lane")/QUADRO.md" ] || err "quadro ausente: $(dirname "$lane")/QUADRO.md"
+  [ -r "$lane" ] || err "lane file unreadable: $lane"
+  [ -e "$(dirname "$lane")/BOARD.md" ] || err "board missing: $(dirname "$lane")/BOARD.md"
 fi
 
-# .impl/ (quadro, checkpoint, saídas) fica fora do git: pelo info/exclude do clone (fase 1) ou pelo .gitignore do repo.
-git -C "$top" check-ignore -q .impl/preflight 2>/dev/null || err ".impl/ não é ignorado pelo git (fase 1 do /wh:implementation: $common/info/exclude)"
+# .impl/ (board, checkpoint, outputs) stays outside git: through the clone's info/exclude (phase 1) or the repo's .gitignore.
+git -C "$top" check-ignore -q .impl/preflight 2>/dev/null || err ".impl/ is not ignored by git (phase 1 of /wh:implementation: $common/info/exclude)"
 
-[ $fail -eq 0 ] && echo "PREFLIGHT OK: $top @ $cur, base $base${port:+, porta $port}"
+[ $fail -eq 0 ] && echo "PREFLIGHT OK: $top @ $cur, base $base${port:+, port $port}"
 exit $fail

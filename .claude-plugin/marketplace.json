@@ -1,12 +1,12 @@
 {
   "name": "wh-harness",
-  "description": "The wh plugin: a generic implementation harness for Claude Code whose skills, agents and hooks read each project's facts from .claude/perfil/.",
+  "description": "The wh plugin: a generic implementation harness for Claude Code whose skills, agents and hooks read each project's facts from .claude/profile/.",
   "owner": { "name": "Walter Dalla" },
   "plugins": [
     {
       "name": "wh",
       "source": "./plugins/wh",
-      "description": "Generic implementation harness: skills, agents and deterministic hooks driven by each project's .claude/perfil/."
+      "description": "Generic implementation harness: skills, agents and deterministic hooks driven by each project's .claude/profile/."
     }
   ]
 }
