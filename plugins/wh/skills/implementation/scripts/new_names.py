@@ -4,7 +4,8 @@
     new_names.py <diff file> <glossary | —>  |  new_names.py --range <base>...<ref> [--git <git path>] <glossary | —>
 
 New name: an identifier (3+ characters) on an added line that appears on no removed and no context line of the whole
-diff; first occurrence only, with the `+++ b/<path>` of its file and its new-file line number. `--range` runs
+diff; first occurrence only, with the `+++ b/<path>` of its file and its new-file line number. Comment lines
+(`#`, `//`, `/*`, `*`), trailing `#`/`//` comments and triple-quoted text are not read for new names. `--range` runs
 `<git> diff <base>...<ref>` in the current directory. Covered: the identifier's normalized form, or any contiguous
 run of its words (split at `_` and at lower-to-upper camelCase boundaries), equals a business or code alias of the
 glossary, parsed by the hook's own `prompt_graph.parse_glossary`; a match with an Avoid alias does not cover and
@@ -24,6 +25,9 @@ import prompt_graph as pg  # noqa: E402
 
 IDENT = re.compile(r'(?<![A-Za-z0-9_])[A-Za-z_][A-Za-z0-9_]{2,}')
 HUNK = re.compile(r'^@@ -\d+(?:,(\d+))? \+(\d+)(?:,(\d+))? @@')
+COMMENT_LINE = re.compile(r'^\s*(#|//|/\*|\*/|\*\s|\*$)')
+TRAILING_COMMENT = re.compile(r'\s(#|//)\s.*$')
+TRIPLE = re.compile(r'"""|\'\'\'')
 LIMIT = 200
 NO_GLOSSARY = ('—', '-')
 
@@ -56,15 +60,37 @@ def parse_args(argv):
     return rng, git, rest
 
 
+def code_part(body, quote):
+    """(code text of a new-side line, triple quote still open after it): comment lines, trailing `#`/`//`
+    comments and triple-quoted text are dropped, so prose words of comments and docstrings are not names."""
+    if quote is None and COMMENT_LINE.match(body):
+        return '', None
+    parts, pos = [], 0
+    while True:
+        if quote:
+            end = body.find(quote, pos)
+            if end < 0:
+                return ' '.join(parts), quote
+            pos, quote = end + 3, None
+            continue
+        m = TRIPLE.search(body, pos)
+        if not m:
+            parts.append(TRAILING_COMMENT.sub('', body[pos:]))
+            return ' '.join(parts), None
+        parts.append(body[pos:m.start()])
+        quote, pos = m.group(0), m.end()
+
+
 def new_names(diff):
     """[(path, line, name)] of the new identifiers, in diff order."""
     added, seen, old = [], set(), set()
-    path, old_left, new_left, line_no = '', 0, 0, 0
+    path, old_left, new_left, line_no, quote = '', 0, 0, 0, None
     for line in diff.splitlines():
         if old_left > 0 or new_left > 0:
             tag, body = line[:1], line[1:]
             if tag == '+':
-                for name in IDENT.findall(body):
+                code, quote = code_part(body, quote)
+                for name in IDENT.findall(code):
                     if name not in seen:
                         seen.add(name)
                         added.append((path, line_no, name))
@@ -74,6 +100,7 @@ def new_names(diff):
                 old.update(IDENT.findall(body))
                 old_left -= 1
             elif tag != '\\':
+                quote = code_part(body, quote)[1]
                 old.update(IDENT.findall(body))
                 old_left -= 1
                 new_left -= 1
@@ -82,6 +109,7 @@ def new_names(diff):
         if line.startswith('+++ '):
             path = line[4:].strip()
             path = path[2:] if path.startswith('b/') else path
+            quote = None
             continue
         m = HUNK.match(line)
         if m:

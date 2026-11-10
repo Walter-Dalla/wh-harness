@@ -101,6 +101,17 @@ class NewNamesTest(unittest.TestCase):
         self.assertEqual(lines, EXPECTED)
         self.assertEqual(self.run_script('--range', 'main...nothing', self.glossary, cwd=repo)[0], 2)
 
+    def test_comments_and_docstrings_are_not_names(self):
+        body = ['"""Module prose about widgets.', '', 'More prose here.', '"""', '# hash comment words',
+                '// slash comment words', '/* block comment', ' * star comment words', ' */',
+                'def build_widget(size):  # trailing remark', '    """One line docstring prose."""',
+                '    return size', "    label = '''inline", "    quoted prose'''", '    return label']
+        text = '--- /dev/null\n+++ b/src/widget.py\n@@ -0,0 +1,%d @@\n' % len(body) + ''.join('+%s\n' % b for b in body)
+        code, lines = self.run_script(self.write('new.diff', text), '—')
+        self.assertEqual(code, 0, lines)
+        self.assertEqual(lines, ['NO GLOSSARY: 5 new names', 'src/widget.py:10 def', 'src/widget.py:10 build_widget',
+                                 'src/widget.py:10 size', 'src/widget.py:12 return', 'src/widget.py:13 label'])
+
     def test_cut_at_200(self):
         body = ''.join('+name_%03d = 1\n' % n for n in range(205))
         path = self.write('big.diff', '--- a/x.py\n+++ b/x.py\n@@ -0,0 +1,205 @@\n' + body)
