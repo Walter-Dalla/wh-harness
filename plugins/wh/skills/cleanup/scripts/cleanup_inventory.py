@@ -117,7 +117,7 @@ def items_block(ids, plan, commits):
 
 def paths_block(root, ref, span):
     lines = ['OLD PATHS']
-    for row in git(root, 'diff', '--name-status', '-M', span).splitlines():
+    for row in git(root, 'diff', '--no-color', '--no-ext-diff', '--name-status', '-M', span).splitlines():
         cells = row.split('\t')
         if cells[0] == 'D' and len(cells) == 2:
             old, label = cells[1], 'D'
@@ -125,7 +125,7 @@ def paths_block(root, ref, span):
             old, label = cells[1], 'R → %s' % cells[2]
         else:
             continue
-        found = git(root, 'grep', '-n', '-F', '-e', old, ref, '--', '*.md', ok=(0, 1))
+        found = git(root, 'grep', '--no-color', '-n', '-F', '-e', old, ref, '--', '*.md', ok=(0, 1))
         where = []
         for hit in found.splitlines():
             parts = hit[len(ref) + 1:].split(':', 2)
@@ -165,7 +165,8 @@ def removed_names(diff):
 
 def names_block(root, ref, span):
     lines = ['OLD NAMES']
-    candidates = removed_names(git(root, 'diff', '-M', span))
+    candidates = removed_names(git(root, 'diff', '--no-color', '--no-ext-diff', '--src-prefix=a/', '--dst-prefix=b/',
+                                   '-M', span))
     tracked = [p for p in git(root, 'ls-tree', '-r', '-z', '--name-only', ref).split('\0') if p]
     code = [p for p in tracked if not p.endswith('.md')]
     docs = [p for p in tracked if p.endswith('.md')]
@@ -198,7 +199,7 @@ def main(argv):
         git(root, 'rev-parse', '--git-dir')
         for r in (main_branch, ref):
             git(root, 'rev-parse', '--verify', '--quiet', r + '^{commit}')
-        log = git(root, 'log', '--no-merges', '--reverse', '--format=%h %s', '%s..%s' % (main_branch, ref))
+        log = git(root, 'log', '--no-color', '--no-merges', '--reverse', '--format=%h %s', '%s..%s' % (main_branch, ref))
         commits = [tuple(line.split(' ', 1)) if ' ' in line else (line, '') for line in log.splitlines()]
         span = '%s...%s' % (main_branch, ref)
         out = items_block(plan_ids(plan), plan, commits) + paths_block(root, ref, span) + names_block(root, ref, span)

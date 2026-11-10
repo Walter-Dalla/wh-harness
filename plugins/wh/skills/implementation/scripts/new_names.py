@@ -175,7 +175,8 @@ def main(argv):
                 raise Failed('cannot read the diff: %s' % exc)
         else:
             try:
-                p = subprocess.run([git, 'diff', rng], capture_output=True)
+                p = subprocess.run([git, 'diff', '--no-color', '--no-ext-diff', '--src-prefix=a/', '--dst-prefix=b/', rng],
+                                   capture_output=True)
             except OSError as exc:
                 raise Failed('cannot run %s: %s' % (git, exc))
             if p.returncode != 0:

@@ -33,6 +33,8 @@ class CleanupInventoryTest(unittest.TestCase):
         self.repo = os.path.join(self.tmp, 'repo')
         os.makedirs(self.repo)
         git(self.repo, 'init', '-q', '-b', 'main', '.')
+        for name, value in (('color.ui', 'always'), ('diff.noprefix', 'true'), ('diff.mnemonicPrefix', 'true')):
+            git(self.repo, 'config', name, value)  # the script's git output must not depend on user config
         self.write('src/old.py', 'def old_entry():\n    return 1\n')
         self.write('src/gone.py', 'GONE_FLAG = 1\n')
         self.write('src/calc.py', 'def legacy_total():\n    return 0\n\n\ndef keep_total():\n    return 1\n')

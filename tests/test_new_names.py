@@ -89,6 +89,8 @@ class NewNamesTest(unittest.TestCase):
         repo = os.path.join(self.tmp, 'repo')
         os.makedirs(repo)
         git(repo, 'init', '-q', '-b', 'main', '.')
+        for name, value in (('color.ui', 'always'), ('diff.noprefix', 'true'), ('diff.mnemonicPrefix', 'true')):
+            git(repo, 'config', name, value)  # the script's git output must not depend on user config
         self.write('repo/src/shop.py', BEFORE)
         git(repo, 'add', '-A')
         git(repo, 'commit', '-q', '-m', 'base')
