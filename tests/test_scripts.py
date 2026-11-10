@@ -478,6 +478,16 @@ class ScriptsTest(unittest.TestCase):
         code, out = run(intake, self.tmp, os.path.join(self.tmp, 'missing'))
         self.assertEqual(code, 2, out)
 
+    def test_intake_next_counts_ids_removed_from_the_folder(self):
+        intake = os.path.join(SCRIPTS, 'intake.sh')
+        self.write('docs/pending/P-004-x.md', '---\nid: P-004\nstatus: open\n---\n')
+        self.commit_all('add P-004')
+        git(self.repo, 'rm', '-q', 'docs/pending/P-004-x.md')
+        git(self.repo, 'commit', '-q', '-m', 'land P-004')
+        self.assertEqual(run(intake, self.tmp, self.repo, '--next'), (0, 'P-005\n'))
+        self.write('docs/pending/P-002-y.md', '---\nid: P-002\nstatus: open\n---\n')  # uncommitted, lower
+        self.assertEqual(run(intake, self.tmp, self.repo, '--next'), (0, 'P-005\n'))
+
     # ---- agent_chat.sh
 
     def test_agent_chat_creates_numbered_files_and_appends_answers(self):

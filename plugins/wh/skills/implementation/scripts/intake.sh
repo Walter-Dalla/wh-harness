@@ -3,7 +3,7 @@
 # resolves the pending files and the slug, or gives the next free pending id. `KEY=VALUE` lines on stdout.
 #
 #   intake.sh <root> [<P-NNN | path.md | text>…]    PENDING_DIR=, INTAKE=file|raw, PENDING=, SLUG=, INTAKE OK
-#   intake.sh <root> --next                        P-NNN (highest id in the pending folder + 1)
+#   intake.sh <root> --next                        P-NNN (highest id in the pending folder or in its git history + 1)
 #
 # Pending folder: the first backticked path of the `## Pending` section of <root>/.claude/profile/_common.md,
 # else docs/pending/; relative to <root>, created when missing. With no argument, every P-*.md whose first 10
@@ -37,6 +37,14 @@ if [ $# -eq 1 ] && [ "$1" = --next ]; then
     n=${f##*/P-}; n=${n:0:3}
     [ $((10#$n)) -gt "$high" ] && high=$((10#$n))
   done
+  # Every pending file ever added to the folder counts too, so an id whose file left the folder is never reused.
+  # Outside a git work tree, or with git failing or absent, only the folder counts.
+  while IFS= read -r p; do
+    p=${p##*/}
+    [[ $p == P-[0-9][0-9][0-9]*.md ]] || continue
+    n=${p:2:3}
+    [ $((10#$n)) -gt "$high" ] && high=$((10#$n))
+  done < <(git -C "$dir" log --all --diff-filter=A --name-only --format= -- . 2>/dev/null)
   printf 'P-%03d\n' $((high + 1))
   exit 0
 fi
