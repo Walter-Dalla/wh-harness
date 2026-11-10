@@ -81,6 +81,18 @@ class ScriptsTest(unittest.TestCase):
         self.assertNotIn('union/c.txt', out)
         self.assertNotIn('src/a.cs', out)
 
+    def test_scope_classify_prints_one_label_per_file(self):
+        for f in ('src/a.cs', 'other/b.cs', 'union/c.txt', 'lixo.cs'):
+            self.write(f)
+        self.commit_all()
+        code, out = run(SCOPE, self.repo, '--classify', self.lane(), self.base)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(sorted(out.splitlines()),
+                         ['MAY: other/b.cs', 'OUTSIDE: lixo.cs', 'OWN: src/a.cs', 'UNION: union/c.txt'])
+        code, out = run(SCOPE, self.repo, '--classify', self.lane('# f\nOwns: nothing in backticks\n'), self.base)
+        self.assertEqual(code, 2)
+        self.assertIn('SCOPE FAILED', out)
+
     def test_scope_ok_when_everything_is_owned(self):
         self.write('src/a.cs')
         self.write('src/deep/b.cs')
