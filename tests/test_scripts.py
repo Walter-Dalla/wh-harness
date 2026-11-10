@@ -530,6 +530,29 @@ class ScriptsTest(unittest.TestCase):
             self.assertEqual(code, 2, args)
             self.assertIn('AGENT_CHAT FAILED: usage: agent_chat.sh', out)
 
+    def test_agent_chat_parallel_asks_get_distinct_numbers_and_a_held_lock_fails(self):
+        chat_sh = os.path.join(SCRIPTS, 'agent_chat.sh')
+        impl = os.path.join(self.tmp, 'impl')
+        chat = os.path.join(os.path.realpath(impl), 'agent_chat')
+        os.makedirs(chat)
+        procs = [subprocess.Popen(['bash', chat_sh, impl, 'ask', f'f{i}', f'demo-{i}', 'qa', 'q'], cwd=self.tmp,
+                                  env=GIT_ENV, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+                 for i in range(1, 9)]
+        for p in procs:
+            out, _ = p.communicate()
+            self.assertEqual(p.returncode, 0, out)
+        self.assertEqual(sorted(name[:2] for name in os.listdir(chat)), [f'{i:02d}' for i in range(1, 9)])
+        self.assertFalse(os.path.exists(os.path.join(chat, '.lock')))
+
+        with open(os.path.join(chat, '.lock'), 'w', encoding='utf-8'):
+            pass
+        code, out = run(chat_sh, self.tmp, impl, 'ask', 'f9', 'demo-9', 'qa', 'q', WH_CHAT_LOCK_TRIES='2')
+        self.assertEqual(code, 1, out)
+        self.assertIn('AGENT_CHAT FAILED:', out)
+        self.assertIn('.lock is held', out)
+        self.assertEqual(len([n for n in os.listdir(chat) if n.endswith('.md')]), 8)
+        self.assertTrue(os.path.isfile(os.path.join(chat, '.lock')))
+
 
 if __name__ == '__main__':
     unittest.main()
