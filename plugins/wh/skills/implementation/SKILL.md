@@ -82,7 +82,7 @@ A review without running anything, by an `impl-qa` with fresh eyes: plan decisio
 - Large: one per lane, as soon as it delivers, before the merge ([`LANES.md`](LANES.md) §3).
 - Small: no separate code QA; the final QA (phase 5, `Gates: yes`) applies the four gates to the whole diff and you fix the findings (step below). Exception: a **contract** item whose consumer is outside the plan (another repository, an already published client, a persisted format an old version reads) = one code QA on `impl/<slug>` (base `<main>`; `<lane>` = `code` in the template below) right after the item, as in the large case; a contract with producer and consumer in the same plan waits for the final QA.
 
-Before dispatching, write the diff: `git -C <intwt> diff <base>...<remote>/<branch> > <root>/.impl/<slug>/qa/<lane>.diff`.
+Before dispatching, at the clone root, `${CLAUDE_PLUGIN_ROOT}/skills/implementation/scripts/lane_prompt.sh <slug> <lane> --qa [--retest '<ids>']` writes the diff to `<root>/.impl/<slug>/qa/<lane>.diff` and prints the prompt below (`<lane>` = `code` for the small-task exception of this section), pasted whole into `Agent(...)`.
 
 ```text
 PLUGIN_ROOT=${CLAUDE_PLUGIN_ROOT}
@@ -101,7 +101,7 @@ Findings (type and severity in the QA file): **bug, standard, name or missing te
 
 ## 5. Final QA (the expensive run, once, at the tip of `impl/<slug>`)
 
-`<main>` moved on the remote during the task (`MAIN MOVED` from `merge_lane.sh`, or `git -C <intwt> fetch <remote>` followed by `git -C <intwt> rev-list --count HEAD..<remote>/<main>` above zero): merge it first, `git -C <intwt> merge --no-ff <remote>/<main> -m "impl: <main> into impl/<slug>"`, resolve, then `${CLAUDE_PLUGIN_ROOT}/skills/implementation/scripts/profile_run.sh build <intwt>` and `profile_run.sh suite <intwt>` (verdict = the exit; `PROFILE_RUN FAILED` = profile § Build and § Tests by hand, [`LANES.md`](LANES.md) §3, step 8); the QA runs on what the PR will actually merge. Then push `impl/<slug>` and one `impl-qa` in mode `final`:
+`<main>` moved on the remote during the task (`MAIN MOVED` from `merge_lane.sh`, or `git -C <intwt> fetch <remote>` followed by `git -C <intwt> rev-list --count HEAD..<remote>/<main>` above zero): merge it first, `git -C <intwt> merge --no-ff <remote>/<main> -m "impl: <main> into impl/<slug>"`, resolve, then `${CLAUDE_PLUGIN_ROOT}/skills/implementation/scripts/profile_run.sh build <intwt>` and `profile_run.sh suite <intwt>` (verdict = the exit; `PROFILE_RUN FAILED` = profile § Build and § Tests by hand, [`LANES.md`](LANES.md) §3, step 8); the QA runs on what the PR will actually merge. Then push `impl/<slug>` and one `impl-qa` in mode `final`, its prompt the stdout of `lane_prompt.sh <slug> final --qa --areas '<touched areas>' [--retest '<ids>'] [--verify '<ids>'] [--gates yes]`:
 
 ```text
 PLUGIN_ROOT=${CLAUDE_PLUGIN_ROOT}
