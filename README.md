@@ -163,7 +163,8 @@ Cost note: the orchestrator runs on the session's model and pays most of the bil
 | Path | What |
 |---|---|
 | `plugins/wh/skills/<skill>/SKILL.md` | the procedure of each skill; `PROFILE.md` beside it is the template of its profile |
-| `plugins/wh/skills/implementation/` | `TRIAGE.md` (triage and plan format), `LANES.md` (parallel lanes), `ENVIRONMENT.md` (agent protocol), `REPORT.md` (retros and report), `PENDING.md` (pending-file format), `scripts/preflight.sh`, `scripts/scope.sh`, `scripts/intake.sh` (intake mode and pending ids), `scripts/agent_chat.sh` (consultation files) |
+| `plugins/wh/skills/implementation/` | `TRIAGE.md` (triage and plan format), `LANES.md` (parallel lanes), `ENVIRONMENT.md` (agent protocol), `REPORT.md` (retros and report), `PENDING.md` (pending-file format), `scripts/preflight.sh`, `scripts/scope.sh`, `scripts/intake.sh` (intake mode and pending ids), `scripts/agent_chat.sh` (consultation files), `scripts/lane_prompt.sh` (dispatch prompts and QA diffs), `scripts/wave_prep.sh` (wave attachment), `scripts/profile_run.sh` (profile § Commands runner), `scripts/report_skeleton.py` (report skeleton), `scripts/new_names.py` (declared new names for QA gate 3) |
+| `plugins/wh/skills/cleanup/scripts/cleanup_inventory.py` | commits × plan items and old names still cited in `*.md` |
 | `plugins/wh/skills/adopt/scripts/check.py` | the deterministic onboarding diagnostic |
 | `plugins/wh/agents/` | `impl-structure`, `impl-enrich`, `impl-dev`, `impl-qa` |
 | `plugins/wh/hooks/`, `plugins/wh/scripts/prompt_graph.py` | the enrichment hook (Python stdlib only) |
