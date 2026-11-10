@@ -4,6 +4,7 @@
 """
 import os
 import re
+import shutil
 import unittest
 
 import tests.test_scripts as ts
@@ -112,6 +113,27 @@ class WavePrepTest(unittest.TestCase):
         self.assertEqual(out.splitlines()[-1],
                          'WAVE ENRICHER: 0 green item(s), 0 CONTRACT line(s), 1 owned file(s) moved')
         self.assertIn('## Moved files inside a pending lane\nf1 · OWN: src/a.cs\n', self.read_wave())
+
+    def test_broken_acceptance_run_fails_instead_of_clean(self):
+        self.write('.impl/demo/f1.md', '# f1 · demo · wave W2 · port —\nOwns: `src/*`.\nNo item heading.\n')
+        code, out = self.prep()
+        self.assertEqual(code, 1, out)
+        self.assertTrue(out.startswith('WAVE_PREP FAILED: acceptance.py exit 2 for f1'), out)
+        self.assertIn('no item', out)
+        self.assertNotIn('WAVE CLEAN', out)
+
+    def test_crashing_acceptance_fails_with_its_stderr(self):
+        fake = os.path.join(self.tmp, 'scripts')
+        os.makedirs(fake)
+        for name in ('wave_prep.sh', 'scope.sh'):
+            shutil.copy(os.path.join(ts.SCRIPTS, name), fake)
+        with open(os.path.join(fake, 'acceptance.py'), 'w', encoding='utf-8') as fh:
+            fh.write('import sys\nsys.stderr.write("Traceback: boom\\n")\nsys.exit(1)\n')
+        code, out = run(os.path.join(fake, 'wave_prep.sh'), self.repo, 'demo', 'W2', self.base, 'f1')
+        self.assertEqual(code, 1, out)
+        self.assertTrue(out.startswith('WAVE_PREP FAILED: acceptance.py exit 1 for f1'), out)
+        self.assertIn('Traceback: boom', out)
+        self.assertFalse(os.path.exists(self.wave_file))
 
     def test_failures(self):
         code, out = self.prep('f1', 'f2')

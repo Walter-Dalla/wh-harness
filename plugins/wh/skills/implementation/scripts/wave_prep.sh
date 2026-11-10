@@ -12,7 +12,8 @@
 # Writes .impl/<slug>/wave-<wave>.md (a title and four sections, `—` when empty) and prints its path, then
 # `WAVE CLEAN` (exit 0) or `WAVE ENRICHER: <g> green item(s), <c> CONTRACT line(s), <o> owned file(s) moved` (exit 3).
 # Exit 1 with `WAVE_PREP FAILED: <reason>`: bad call, not the root, integration worktree, lane file or board
-# missing, unknown base.
+# missing, unknown base, acceptance.py exiting non-zero or without its `ACCEPTANCE:` line (the message carries the
+# last lines of its output and stderr), scope.sh --classify failing.
 set -u
 
 fail() { echo "WAVE_PREP FAILED: $*"; exit 1; }
@@ -36,10 +37,17 @@ done
 git -C "$intwt" rev-parse --verify -q "$base^{commit}" >/dev/null || fail "base $base unknown"
 tip=$(git -C "$intwt" rev-parse HEAD) || fail "no HEAD in $intwt"
 
+errlog=$(mktemp) || fail "cannot create a temporary file"
+trap 'rm -f "$errlog"' EXIT
 accept=; green=0
 for lane in "$@"; do
-  # stdout only: acceptance.py may print warnings on stderr.
-  out=$(python3 -I "$scripts/acceptance.py" "$impl/$lane.md" "$intwt" 2>/dev/null)
+  # Only stdout goes to the attachment: acceptance.py may print warnings on stderr. Red items still exit 0;
+  # any other exit, or no summary line, is a broken run and never counts as a clean wave.
+  out=$(python3 -I "$scripts/acceptance.py" "$impl/$lane.md" "$intwt" 2>"$errlog")
+  code=$?
+  if [ "$code" -ne 0 ] || ! grep -q '^ACCEPTANCE: ' <<< "$out"; then
+    fail "acceptance.py exit $code for $lane, no ACCEPTANCE summary trusted: $(tail -n 3 <<< "$out") $(tail -n 5 "$errlog")"
+  fi
   accept+="### $lane"$'\n'"$out"$'\n'
   while IFS= read -r line; do
     [[ $line == *' · exit 0 · '* ]] && green=$((green + 1))
