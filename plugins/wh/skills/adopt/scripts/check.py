@@ -25,6 +25,8 @@ CONTEXT_KEYS = {'glossario', 'features', 'indice_features', 'codegraph', 'class_
 NO_PROFILE = {'profile', 'retro', 'adopt'}
 AGENTS_DIR = os.path.join('.claude', 'agents')
 TEMPLATE_MARK = re.compile(r'<!--\s*wh-template:\s*(\S+)\s+(\d+)\s*-->')
+COMMAND_KEYS = ('build', 'suite', 'typecheck', 'service', 'health')
+COMMAND_LINE = re.compile(r'^(build|suite|typecheck|service|health):[ \t]+(`[^`]+`|—)')
 
 
 def headings(text):
@@ -79,6 +81,8 @@ class Check:
             self.add('MISSING', 'profile ' + name, 'missing sections: ' + ', '.join(missing))
         else:
             self.add('OK', 'profile ' + name)
+        if name == 'implementation' and 'Commands' in headings(text):
+            self.commands(text, name)
         lines = len(text.splitlines())
         if lines > limit:
             self.add('WARN', 'profile ' + name, '%d lines (target ≤ %d): the excess becomes a repo doc' % (lines, limit))
@@ -88,6 +92,22 @@ class Check:
         empty = [s for s in headings(text) if re.search(r'^## %s\n+—' % re.escape(s), text, re.M)]
         if empty:
             self.add('WARN', 'profile ' + name, 'sections —: ' + ', '.join(empty))
+
+    def commands(self, text, name):
+        """§ Commands: one `<key>: `<command>`` (or `—`) line per key; build and suite judged by their exit code."""
+        m = re.search(r'^## Commands[ \t]*\n(.*?)(?=^## |\Z)', text, re.M | re.S)
+        found = {}
+        for line in (m.group(1) if m else '').splitlines():
+            km = COMMAND_LINE.match(line)
+            if km:
+                found.setdefault(km.group(1), km.group(2))
+        bad = [k for k in COMMAND_KEYS if k not in found]
+        if bad:
+            self.add('MISSING', 'profile ' + name, 'Commands: missing or malformed keys: ' + ', '.join(bad))
+        for key in ('build', 'suite'):
+            cmd = found.get(key, '')
+            if '|' in cmd and 'pipefail' not in cmd:
+                self.add('WARN', 'profile ' + name, 'Commands: %s has a pipe (the verdict is the exit code: no pipe, or set -o pipefail)' % key)
 
     def profiles(self):
         self.profile(self.p(PROFILE_DIR, '_common.md'), os.path.join(self.plugin, 'skills', 'profile', 'COMMON.md'), LIMIT_COMMON, '_common')

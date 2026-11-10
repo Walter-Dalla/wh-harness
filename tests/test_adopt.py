@@ -55,6 +55,35 @@ class ChecarTest(unittest.TestCase):
         self.assertIn('3 features', grafo['detalhe'])
         self.assertTrue(any(it['item'] == 'profile _common' and '[inferred]' in it['detalhe'] for it in itens))
 
+    def edit(self, root, rel, old, new):
+        path = os.path.join(root, rel)
+        with open(path, encoding='utf-8') as fh:
+            text = fh.read()
+        self.assertIn(old, text)
+        with open(path, 'w', encoding='utf-8') as fh:
+            fh.write(text.replace(old, new))
+
+    def test_commands_block_missing_keys_and_pipe_are_reported(self):
+        def commands(itens):
+            return [(it['estado'], it['detalhe']) for it in itens
+                    if it['item'] == 'profile implementation' and it['detalhe'].startswith('Commands:')]
+        _, _, itens = run(DEMO)
+        self.assertEqual(commands(itens), [])
+        repo = os.path.join(self.tmp, 'repo')
+        shutil.copytree(DEMO, repo)
+        rel = '.claude/profile/implementation.md'
+        self.edit(repo, rel, 'health: `curl -sf localhost:<port>/health` [inferred]\n', '')
+        self.edit(repo, rel, 'typecheck: `dotnet format --verify-no-changes`', 'typecheck: dotnet format --verify-no-changes')
+        self.edit(repo, rel, 'suite: `dotnet test --nologo -v q`', 'suite: `dotnet test --nologo -v q | tail -5`')
+        code, pares, itens = run(repo)
+        self.assertEqual(code, 1)
+        self.assertIn(('profile implementation', 'MISSING'), pares)
+        self.assertIn(('MISSING', 'Commands: missing or malformed keys: typecheck, health'), commands(itens))
+        self.assertIn(('WARN', 'Commands: suite has a pipe (the verdict is the exit code: no pipe, or set -o pipefail)'), commands(itens))
+        self.edit(repo, rel, '| tail -5', '')
+        _, _, itens = run(repo)
+        self.assertNotIn('WARN', [s for s, _ in commands(itens)])
+
     def copy_agents(self, repo):
         tpl_dir = os.path.join(PLUGIN, 'skills', 'adopt', 'templates', 'agents')
         for name in os.listdir(tpl_dir):

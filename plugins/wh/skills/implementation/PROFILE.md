@@ -7,19 +7,27 @@ What `/wh:implementation` and the `impl-*` agents need to know about the reposit
 ```markdown
 # Profile of /wh:implementation
 
+## Commands
+What the scripts run (`profile_run.sh <key>`): the five keys, one per line, the command in backticks and complete, `—` where the repo has none; the source in brackets after it. `<port>` and `<slug>` are replaced by the caller. No backtick inside a command (use `$(…)`).
+build: `<command in quiet mode>`
+suite: `<full command in quiet mode, no pipe>`
+typecheck: `<lint or typecheck that runs per item>`
+service: `<command that brings up the disposable service on <port>, state named with <slug>>`
+health: `<command that exits 0 when the service on <port> answers>`
+
 ## Build
-`<command in quiet mode>` (no new warning = green). The verdict is this command's exit code: no pipe.
+The `build` key of § Commands (no new warning = green). The verdict is this command's exit code: no pipe.
 
 ## Tests
 Area: `<command with <filter>>` (e.g. `dotnet test X --filter "FullyQualifiedName~<filter>"`, `npm test -- <filter>`, `pytest -k <filter>`).
-Suite: `<full command in quiet mode>` (e.g. `dotnet test --nologo -v q`, `pytest -q`, `python3 -m unittest -q`). The verdict is this command's exit code: no pipe (`| grep` and `| tail` return the filter's exit). Filter only to read a long output, on a separate line: `<command> 2>&1 | tail -30`.
+Suite: the `suite` key of § Commands (e.g. `dotnet test --nologo -v q`, `pytest -q`, `python3 -m unittest -q`). The verdict is this command's exit code: no pipe (`| grep` and `| tail` return the filter's exit). Filter only to read a long output, on a separate line: `<command> 2>&1 | tail -30`.
 Acceptance of an item = the area test that only goes green with the item done (refactor: the area suite, green before and after); a new test when there is none. Clock and randomness injected where the repo injects them.
 
 ## Checks
-Lint/typecheck/formatting/client verification, one per line, with the command and when it runs (per item, end of lane, final QA). E.g. `deploy/lint.sh` (final QA, without `--update`).
+Lint/typecheck/formatting/client verification, one per line, with the command and when it runs (per item, end of lane, final QA); the line that runs per item is the `typecheck` key of § Commands. E.g. `deploy/lint.sh` (final QA, without `--update`).
 
 ## Disposable service
-How to bring up an isolated instance for testing (API, server, database), with `<port>` and `<slug>` in the command, the health check and how to stop it. State fixtures, if any. Ports: `_common § Ports`. `—` = the repo needs no service.
+The `service` key of § Commands brings up an isolated instance for testing (API, server, database) on `<port>`, its state named with `<slug>`; the `health` key says when it answers. Here: how to stop it and the state fixtures, if any. Ports: `_common § Ports`. `—` = the repo needs no service (both keys `—`).
 
 ## Contract
 What counts as a contract (public API, DTO, event, persisted format, CLI, schema) and how the contract fixture is updated and reviewed (snapshot: acceptance variable and the `git diff` of the folder; golden file; generated schema). Producer and consumer tests.

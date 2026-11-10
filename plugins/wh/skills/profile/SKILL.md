@@ -32,7 +32,7 @@ For each missing section, in this order, stopping at the first that answers: `CL
 
 ## 4. Write
 
-Facts, one line per fact, commands in backticks and complete (with `<port>`, `<slug>`, `<filter>` where the skill substitutes). Nothing `_common.md` already says: cite `_common § Git`. No procedure ("first do X, then Y"): that belongs to the skill. Target: `_common.md` ≤ 40 lines, `<skill>.md` ≤ 60; past that, the excess becomes a repo doc the profile points at.
+Facts, one line per fact, commands in backticks and complete (with `<port>`, `<slug>`, `<filter>` where the skill substitutes). The implementation profile's § Commands is written as `` <key>: `<command>` `` lines, the five keys, `—` where the repo has none, and its prose sections cite the key instead of repeating the command. Nothing `_common.md` already says: cite `_common § Git`. No procedure ("first do X, then Y"): that belongs to the skill. Target: `_common.md` ≤ 40 lines, `<skill>.md` ≤ 60; past that, the excess becomes a repo doc the profile points at.
 
 `prompt-graph` hook: `.claude/profile/context.json` missing and the repo has a glossary or a feature map (`_common § Docs`) = write it with only the keys that differ from the default (`glossario`, `features`, `indice_features`, `codegraph`, `idioma`; defaults in `DEFAULTS` of `${CLAUDE_PLUGIN_ROOT}/scripts/prompt_graph.py`). Neither source: do not create the file.
 
