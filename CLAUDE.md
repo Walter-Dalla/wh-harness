@@ -8,3 +8,4 @@
 - Rule: the skill has the procedure, the profile has the facts. No skill or agent cites a project command; it cites `profile § Section`.
 - Tests: `python3 -m unittest discover -s tests` (hook against `examples/demo`, `scope.sh`, `preflight.sh`, `check.py`, section references). Shell scripts go through `bash -n` and `shellcheck -S warning` in CI.
 - Changed a skill or the hook: bump `version` in `plugins/wh/.claude-plugin/plugin.json` and adjust the `MANUAL`.
+- Owner's open items: `docs/PENDING.md`.
