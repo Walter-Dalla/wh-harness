@@ -14,6 +14,8 @@ Every **open finding has a home**, and only one: the table in profile § Homes; 
 
 ## 1. Inventory
 
+With a `slug`, start from `python3 -I "${CLAUDE_PLUGIN_ROOT}/skills/cleanup/scripts/cleanup_inventory.py" <slug> --main <main>`: `ITEMS` (plan id × commits, or `NO COMMIT`) gives the state of the plan (executed in full, in part, untouched), `OLD PATHS` and `OLD NAMES` the `.md` files to update in § 4. What it does not see (it reads identifiers and paths: routes, constants, keys) and a run without a slug keep the manual search below.
+
 - **Consumed:** the `.md` files the run read as instructions (profile § Consumed: plan and lanes, prompts, debts, prompt cited in the request). For each: executed in full, in part, or untouched (by the ids in the commits: `git log <main>..HEAD --format=%s`).
 - **Affected:** `git diff <main>...HEAD --name-status` and the symbols, files, routes, constants and keys the diff created, renamed or deleted. Each old name and each deleted path, searched in the repo's `.md` files: `git grep -n -e '<name>' -- '*.md'`.
 
