@@ -307,6 +307,36 @@ class ScriptsTest(unittest.TestCase):
         self.assertIn("on 'other', not main", out)
         self.assertFalse(os.path.exists(os.path.join(self.repo, '.impl')))
 
+    def test_impl_env_pull_only_pulls_and_creates_nothing(self):
+        remote = self.bare_remote()
+        other = os.path.join(self.tmp, 'other')
+        git(self.tmp, 'clone', '-q', remote, other)
+        os.makedirs(os.path.join(other, 'docs', 'pending'))
+        with open(os.path.join(other, 'docs', 'pending', 'P-001-x.md'), 'w', encoding='utf-8') as fh:
+            fh.write('---\nid: P-001\nstatus: open\n---\n')
+        git(other, 'add', '-A')
+        git(other, 'commit', '-q', '-m', 'pending')
+        git(other, 'push', '-q', 'origin', 'main')
+        pushed = git(other, 'rev-parse', 'HEAD')
+
+        code, out = run(ENV, self.repo, '--pull-only', PATH='/usr/bin:/bin')
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out.splitlines()[-1], 'PULL OK')
+        env = dict(l.split('=', 1) for l in out.splitlines() if '=' in l)
+        self.assertEqual(sorted(env), ['BASE', 'MAIN', 'REMOTE', 'ROOT'])
+        self.assertEqual(env['BASE'], pushed)
+        self.assertTrue(os.path.isfile(os.path.join(self.repo, 'docs', 'pending', 'P-001-x.md')))
+        self.assertFalse(os.path.exists(os.path.join(self.repo, '.impl')))
+        self.assertFalse(os.path.exists(os.path.join(self.repo, '.claude', 'worktrees')))
+
+        code, out = run(ENV, self.repo, '--pull-only', '--no-pull')
+        self.assertEqual(code, 1)
+        self.assertIn('ENV FAILED: --pull-only with --no-pull', out)
+        git(self.repo, 'switch', '-q', '-c', 'other')
+        code, out = run(ENV, self.repo, '--pull-only')
+        self.assertEqual(code, 1)
+        self.assertIn('ENV FAILED: clone is on', out)
+
     # ---- board.sh
 
     def test_board_appends_a_timestamped_line(self):
