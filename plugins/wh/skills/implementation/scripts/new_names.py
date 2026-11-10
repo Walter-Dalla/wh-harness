@@ -5,7 +5,8 @@
 
 New name: an identifier (3+ characters) on an added line that appears on no removed and no context line of the whole
 diff; first occurrence only, with the `+++ b/<path>` of its file and its new-file line number. Comment lines
-(`#`, `//`, `/*`, `*`), trailing `#`/`//` comments and triple-quoted text are not read for new names. `--range` runs
+(`#`, `//`, `/*`, `*`), trailing `#`/`//` comments and triple-quoted text are not read for new names; `.md` files
+and lockfiles (package-lock.json, yarn.lock, pnpm-lock.yaml, poetry.lock, Cargo.lock, go.sum) are skipped. `--range` runs
 `<git> diff <base>...<ref>` in the current directory. Covered: the identifier's normalized form, or any contiguous
 run of its words (split at `_` and at lower-to-upper camelCase boundaries), equals a business or code alias of the
 glossary, parsed by the hook's own `prompt_graph.parse_glossary`; a match with an Avoid alias does not cover and
@@ -28,6 +29,7 @@ HUNK = re.compile(r'^@@ -\d+(?:,(\d+))? \+(\d+)(?:,(\d+))? @@')
 COMMENT_LINE = re.compile(r'^\s*(#|//|/\*|\*/|\*\s|\*$)')
 TRAILING_COMMENT = re.compile(r'\s(#|//)\s.*$')
 TRIPLE = re.compile(r'"""|\'\'\'')
+LOCKFILES = {'package-lock.json', 'yarn.lock', 'pnpm-lock.yaml', 'poetry.lock', 'Cargo.lock', 'go.sum'}
 LIMIT = 200
 NO_GLOSSARY = ('—', '-')
 
@@ -81,13 +83,28 @@ def code_part(body, quote):
         quote, pos = m.group(0), m.end()
 
 
+def ignored(path):
+    """Markdown files and lockfiles hold no code names."""
+    return path.endswith('.md') or os.path.basename(path) in LOCKFILES
+
+
 def new_names(diff):
     """[(path, line, name)] of the new identifiers, in diff order."""
     added, seen, old = [], set(), set()
     path, old_left, new_left, line_no, quote = '', 0, 0, 0, None
+    old_path, skip = '', False
     for line in diff.splitlines():
         if old_left > 0 or new_left > 0:
             tag, body = line[:1], line[1:]
+            if skip:
+                if tag == '+':
+                    new_left -= 1
+                elif tag == '-':
+                    old_left -= 1
+                elif tag != '\\':
+                    old_left -= 1
+                    new_left -= 1
+                continue
             if tag == '+':
                 code, quote = code_part(body, quote)
                 for name in IDENT.findall(code):
@@ -106,10 +123,14 @@ def new_names(diff):
                 new_left -= 1
                 line_no += 1
             continue
+        if line.startswith('--- '):
+            old_path = line[4:].strip()
+            continue
         if line.startswith('+++ '):
             path = line[4:].strip()
             path = path[2:] if path.startswith('b/') else path
             quote = None
+            skip = any(ignored(p) for p in (old_path, path) if p != '/dev/null')
             continue
         m = HUNK.match(line)
         if m:

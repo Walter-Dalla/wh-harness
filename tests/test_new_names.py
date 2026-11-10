@@ -112,6 +112,17 @@ class NewNamesTest(unittest.TestCase):
         self.assertEqual(lines, ['NO GLOSSARY: 5 new names', 'src/widget.py:10 def', 'src/widget.py:10 build_widget',
                                  'src/widget.py:10 size', 'src/widget.py:12 return', 'src/widget.py:13 label'])
 
+    def test_markdown_and_lockfiles_are_skipped(self):
+        parts = []
+        for path in ('docs/guide.md', 'package-lock.json', 'web/yarn.lock', 'pnpm-lock.yaml', 'poetry.lock',
+                     'Cargo.lock', 'go.sum', 'src/real.py'):
+            parts.append('--- /dev/null\n+++ b/%s\n@@ -0,0 +1,2 @@\n+%s_one = 1\n+\n' % (path, path.replace('/', '_')
+                                                                                        .replace('.', '_')
+                                                                                        .replace('-', '_')))
+        code, lines = self.run_script(self.write('mixed.diff', ''.join(parts)), '—')
+        self.assertEqual(code, 0, lines)
+        self.assertEqual(lines, ['NO GLOSSARY: 1 new names', 'src/real.py:1 src_real_py_one'])
+
     def test_cut_at_200(self):
         body = ''.join('+name_%03d = 1\n' % n for n in range(205))
         path = self.write('big.diff', '--- a/x.py\n+++ b/x.py\n@@ -0,0 +1,205 @@\n' + body)
