@@ -83,6 +83,11 @@ class ChecarTest(unittest.TestCase):
         self.edit(repo, rel, '| tail -5', '')
         _, _, itens = run(repo)
         self.assertNotIn('WARN', [s for s, _ in commands(itens)])
+        # `—` is a valid value: a repo without that command
+        self.edit(repo, rel, 'typecheck: dotnet format --verify-no-changes', 'typecheck: —')
+        self.edit(repo, rel, 'service: `', 'health: — [inferred]\nservice: `')
+        _, _, itens = run(repo)
+        self.assertEqual(commands(itens), [])
 
     def test_old_perfil_folder_is_reported_with_the_rename(self):
         def folder(itens):
