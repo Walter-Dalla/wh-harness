@@ -3,8 +3,13 @@
 
     new_names.py <diff file> <glossary | —>  |  new_names.py --range <base>...<ref> [--git <git path>] <glossary | —>
 
-New name: an identifier (3+ characters) on an added line that appears on no removed and no context line of the whole
-diff; first occurrence only, with the `+++ b/<path>` of its file and its new-file line number. Comment lines
+Rule: declared names only. New name: an identifier (3+ characters) DECLARED on an added line that appears on no
+removed and no context line of the whole diff; first occurrence only, with the `+++ b/<path>` of its file and its
+new-file line number. Declarations read: `def`/`class`/`fn`/`func` (also `func (r T) X`)/`function`/`const`/`let`
+(`let mut`)/`var`/`interface`/`type`/`enum`/`struct`/`trait`/`record` followed by the name, after optional modifiers
+(`export`, `public`, `pub`, `static`, `async`…); `X =`, `X: T =`, `self.X =`, `this.X =` and shell `X=` (also after
+`local`/`export`/`readonly`/`declare`) at line start; shell `X() {`. Calls, keywords, builtins, parameters and words
+inside strings are never names. Comment lines
 (`#`, `//`, `/*`, `*`), trailing `#`/`//` comments and triple-quoted text are not read for new names; `.md` files
 and lockfiles (package-lock.json, yarn.lock, pnpm-lock.yaml, poetry.lock, Cargo.lock, go.sum) are skipped. `--range` runs
 `<git> diff <base>...<ref>` in the current directory. Covered: the identifier's normalized form, or any contiguous
@@ -30,6 +35,14 @@ COMMENT_LINE = re.compile(r'^\s*(#|//|/\*|\*/|\*\s|\*$)')
 TRAILING_COMMENT = re.compile(r'\s(#|//)\s.*$')
 TRIPLE = re.compile(r'"""|\'\'\'')
 LOCKFILES = {'package-lock.json', 'yarn.lock', 'pnpm-lock.yaml', 'poetry.lock', 'Cargo.lock', 'go.sum'}
+MODIFIERS = (r'(?:(?:export|default|public|private|protected|internal|static|sealed|abstract|final|partial|readonly|'
+             r'declare|async|unsafe|pub(?:\([^)]*\))?)\s+)*')
+KEYWORD_DECL = re.compile(r'^\s*' + MODIFIERS + r'(?:def|class|function\*?|const|let(?:\s+mut)?|var|interface|type|'
+                          r'enum|struct|trait|record|fn|func(?:\s*\([^)]*\))?)\s+([A-Za-z_]\w*)')
+ASSIGN_DECL = re.compile(r'^\s*(?:(?:export|local|readonly|declare(?:\s+-\w+)?)\s+)?(?:self\.|this\.)?'
+                         r'([A-Za-z_]\w*)(\s*)(?::\s*[^=]+?)?(\s*)=(?!=)')
+SHELL_FUNC = re.compile(r'^\s*([A-Za-z_]\w*)\s*\(\)\s*\{')
+NOT_A_NAME = {'else', 'try', 'finally', 'lambda', 'return', 'elif', 'while', 'for', 'if'}
 LIMIT = 200
 NO_GLOSSARY = ('—', '-')
 
@@ -83,6 +96,21 @@ def code_part(body, quote):
         quote, pos = m.group(0), m.end()
 
 
+def declared(code):
+    """Names declared on one line of code (see the module rule); a keyword argument on a continuation line is not."""
+    m = KEYWORD_DECL.match(code) or SHELL_FUNC.match(code)
+    if m:
+        names = [m.group(1)]
+    else:
+        m = ASSIGN_DECL.match(code)
+        if not m or m.group(1) in NOT_A_NAME:
+            return []
+        if not m.group(2) and not m.group(3) and code.rstrip().endswith((',', ')')):
+            return []
+        names = [m.group(1)]
+    return [n for n in names if IDENT.fullmatch(n)]
+
+
 def ignored(path):
     """Markdown files and lockfiles hold no code names."""
     return path.endswith('.md') or os.path.basename(path) in LOCKFILES
@@ -107,7 +135,7 @@ def new_names(diff):
                 continue
             if tag == '+':
                 code, quote = code_part(body, quote)
-                for name in IDENT.findall(code):
+                for name in declared(code):
                     if name not in seen:
                         seen.add(name)
                         added.append((path, line_no, name))

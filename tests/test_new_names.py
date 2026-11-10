@@ -111,8 +111,37 @@ class NewNamesTest(unittest.TestCase):
         text = '--- /dev/null\n+++ b/src/widget.py\n@@ -0,0 +1,%d @@\n' % len(body) + ''.join('+%s\n' % b for b in body)
         code, lines = self.run_script(self.write('new.diff', text), '—')
         self.assertEqual(code, 0, lines)
-        self.assertEqual(lines, ['NO GLOSSARY: 5 new names', 'src/widget.py:10 def', 'src/widget.py:10 build_widget',
-                                 'src/widget.py:10 size', 'src/widget.py:12 return', 'src/widget.py:13 label'])
+        self.assertEqual(lines, ['NO GLOSSARY: 2 new names', 'src/widget.py:10 build_widget',
+                                 'src/widget.py:13 label'])
+
+    def test_only_declared_names(self):
+        files = {
+            'src/cart.py': ['import os', 'class Cart:', '    total_due: int = 0', '    def add_item(self, price, qty=1):',
+                            '        self.last_price = price', '        print(len(price))', '        return sorted(items)',
+                            '        if total_due == 0:', '            run_report(verbose=True,', '                flag_value=1)',
+                            '        counter += 1'],
+            'web/app.ts': ['export function loadData(url) {', 'const MAX_ROWS = 10;', 'let rowCount = 0;',
+                           'interface RowShape { id: number }', 'type RowId = number;', 'enum Mode { On, Off }',
+                           'export default class Store {}', 'console.log(rowCount);', 'this.cache = new Map();'],
+            'bin/tool.sh': ['build_all() {', 'OUT_DIR=build', '  local count=0', '  echo "$OUT_DIR"', '  grep -n foo bar'],
+            'srv/main.go': ['func (s *Server) ServeHTTP(w, r) {', 'type Handler struct {}'],
+            'core/lib.rs': ['pub fn parse_line(text: &str) {', 'pub struct Token;', 'let mut cursor = 0;'],
+            'App/Order.cs': ['public sealed record Order(int Id);'],
+        }
+        text = ''
+        for path, body in files.items():
+            text += '--- /dev/null\n+++ b/%s\n@@ -0,0 +1,%d @@\n' % (path, len(body)) + ''.join('+%s\n' % b for b in body)
+        code, lines = self.run_script(self.write('decl.diff', text), '—')
+        self.assertEqual(code, 0, lines)
+        self.assertEqual(lines, [
+            'NO GLOSSARY: 21 new names',
+            'src/cart.py:2 Cart', 'src/cart.py:3 total_due', 'src/cart.py:4 add_item', 'src/cart.py:5 last_price',
+            'web/app.ts:1 loadData', 'web/app.ts:2 MAX_ROWS', 'web/app.ts:3 rowCount', 'web/app.ts:4 RowShape',
+            'web/app.ts:5 RowId', 'web/app.ts:6 Mode', 'web/app.ts:7 Store', 'web/app.ts:9 cache',
+            'bin/tool.sh:1 build_all', 'bin/tool.sh:2 OUT_DIR', 'bin/tool.sh:3 count',
+            'srv/main.go:1 ServeHTTP', 'srv/main.go:2 Handler',
+            'core/lib.rs:1 parse_line', 'core/lib.rs:2 Token', 'core/lib.rs:3 cursor',
+            'App/Order.cs:1 Order'])
 
     def test_markdown_and_lockfiles_are_skipped(self):
         parts = []
