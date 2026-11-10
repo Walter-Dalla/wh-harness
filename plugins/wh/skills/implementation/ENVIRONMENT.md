@@ -99,7 +99,7 @@ One simple command per call; `git -C <worktree> reset --hard <hash>` in its own 
 
 ## Disposable service
 
-The command is the output of `profile_run.sh service <worktree> --port <port> --slug <slug>-<port> --print` (your port, a disposable state named `<slug>-<port>`), run at the worktree root in the background (`run_in_background`); ready when `profile_run.sh health <worktree> --port <port>` exits 0. `PROFILE_RUN FAILED` (profile from before § Commands): the prose of profile § Disposable service, same port and state. Stop it at the end (`kill <pid>` of the process you started). After the `kill`, the background task ends with exit 137 (SIGKILL) and the notification says it failed: that is the normal end of a service you stopped, not a finding and not a red verdict; only an exit before your `kill` counts as a crash. Never the owner's data state.
+The command is the output of `profile_run.sh service <worktree> --port <port> --slug <slug>-<port> --print` (your port, a disposable state named `<slug>-<port>`), run at the worktree root in the background (`run_in_background`); ready when `profile_run.sh health <worktree> --port <port> --slug <slug>-<port>` exits 0. `PROFILE_RUN FAILED` (profile from before § Commands): the prose of profile § Disposable service, same port and state. Stop it at the end (`kill <pid>` of the process you started). After the `kill`, the background task ends with exit 137 (SIGKILL) and the notification says it failed: that is the normal end of a service you stopped, not a finding and not a red verdict; only an exit before your `kill` counts as a crash. Never the owner's data state.
 
 ## Tests and checks
 
