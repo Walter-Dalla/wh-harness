@@ -71,6 +71,14 @@ class Check:
                 return
         self.add('MISSING', 'repo map', 'CLAUDE.md or AGENTS.md at the root (first source of the profile skill)')
 
+    def legacy(self):
+        """A `.claude/perfil/` folder is the profile layout before 0.7.0: renamed files and Portuguese headings."""
+        if not os.path.isdir(self.p('.claude', 'perfil')):
+            return
+        state = 'WARN' if os.path.isdir(self.p(PROFILE_DIR)) else 'MISSING'
+        self.add(state, 'profile folder', '.claude/perfil/ is the layout before 0.7.0: git mv .claude/perfil .claude/profile, '
+                 '_comum.md → _common.md, contexto.json → context.json, then /wh:profile (English headings)')
+
     def profile(self, path, tpl, limit, name):
         text = read(path)
         if text is None:
@@ -260,6 +268,7 @@ class Check:
     def run(self):
         self.git()
         self.repo_map()
+        self.legacy()
         self.profiles()
         self.shadow()
         self.context()

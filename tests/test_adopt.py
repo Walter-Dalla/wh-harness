@@ -84,6 +84,24 @@ class ChecarTest(unittest.TestCase):
         _, _, itens = run(repo)
         self.assertNotIn('WARN', [s for s, _ in commands(itens)])
 
+    def test_old_perfil_folder_is_reported_with_the_rename(self):
+        def folder(itens):
+            return [it for it in itens if it['item'] == 'profile folder']
+        old = os.path.join(self.tmp, 'old')
+        self.write(old, '.claude/perfil/_comum.md', '# Perfil comum\n')
+        code, pares, itens = run(old)
+        self.assertEqual(code, 1)
+        self.assertIn(('profile folder', 'MISSING'), pares)
+        self.assertIn('git mv .claude/perfil .claude/profile', folder(itens)[0]['detalhe'])
+        repo = os.path.join(self.tmp, 'repo')
+        shutil.copytree(DEMO, repo)
+        _, _, itens = run(repo)
+        self.assertEqual(folder(itens), [])
+        self.write(repo, '.claude/perfil/_comum.md', '# Perfil comum\n')
+        _, pares, itens = run(repo)
+        self.assertIn(('profile folder', 'WARN'), pares)
+        self.assertEqual(len(folder(itens)), 1)
+
     def copy_agents(self, repo):
         tpl_dir = os.path.join(PLUGIN, 'skills', 'adopt', 'templates', 'agents')
         for name in os.listdir(tpl_dir):
