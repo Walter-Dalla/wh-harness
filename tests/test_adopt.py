@@ -183,6 +183,17 @@ class ChecarTest(unittest.TestCase):
         code, pares, itens = run(repo)
         self.assertIn(('links', 'OK'), pares, [it for it in itens if it['item'] == 'links'])
 
+    def test_links_resolve_bare_names_by_basename(self):
+        repo = os.path.join(self.tmp, 'repo')
+        shutil.copytree(DEMO, repo)
+        self.write(repo, 'src/tools/helper.sh', '#!/bin/sh\n')
+        self.write(repo, 'CLAUDE.md', 'Run `helper.sh`, see `check.py`, never `~/.claude/`, and `nowhere.sh`.\n')
+        code, pares, itens = run(repo)
+        link = next(it for it in itens if it['item'] == 'links')
+        self.assertIn('CLAUDE.md → nowhere.sh', link['detalhe'])
+        for ok in ('helper.sh', 'check.py', '~/.claude/'):
+            self.assertNotIn(ok, link['detalhe'])
+
     def test_agent_templates_have_frontmatter_marker_and_no_project_fact(self):
         tpl_dir = os.path.join(PLUGIN, 'skills', 'adopt', 'templates', 'agents')
         for name in os.listdir(tpl_dir):
