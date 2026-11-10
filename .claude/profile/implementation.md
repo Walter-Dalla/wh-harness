@@ -1,5 +1,12 @@
 # Profile of /wh:implementation
 
+## Commands
+build: — [owner]
+suite: `python3 -m unittest discover -s tests -q` [CLAUDE.md]
+typecheck: `shellcheck -S warning plugins/wh/skills/*/scripts/*.sh` [ci: ci.yml]
+service: — [owner]
+health: — [owner]
+
 ## Build
 — (no build; Python and shell run as they are) [owner]
 
