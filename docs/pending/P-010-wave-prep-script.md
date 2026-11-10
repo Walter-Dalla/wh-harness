@@ -17,11 +17,14 @@ Owner: "`wave_prep.sh`: anexo da mensagem WAVE ao enricher = acceptance.py + gre
 4. Test in `tests/test_scripts.py`, cited in the skill, `docs/MANUAL.md` §1 table and §7.
 
 ## Locations
-- `plugins/wh/skills/implementation/scripts/wave_prep.sh` — new script [inferred]
-- `plugins/wh/skills/implementation/LANES.md:56` — today the `WAVE` message to the enricher (§2) carries the moved files [code plugins/wh/skills/implementation/LANES.md:56]
-- `plugins/wh/skills/implementation/SKILL.md` (§ 2 Enrich / § 3 Execute) — where `WAVE` is sent; condition "only if red" [inferred]
-- `plugins/wh/skills/implementation/scripts/acceptance.py` — reused [code docs/MANUAL.md:22]
-- `plugins/wh/skills/implementation/scripts/board.sh` — board format the `CONTRACT` grep reads [code docs/MANUAL.md:22]
+- `plugins/wh/skills/implementation/scripts/wave_prep.sh` (new) — new script [code plugins/wh/skills/implementation/scripts/acceptance.py:1]
+- `plugins/wh/skills/implementation/LANES.md:34` (§ 2 Dispatch) — where the orchestrator sends `Stage: consult. WAVE W<n> at tip <hash>` before each wave after the first; the condition goes here [code plugins/wh/skills/implementation/LANES.md:34]
+- `plugins/wh/agents/impl-enrich.md:59` (§ Stage `consult`, `WAVE W<n>` sentence) — what the enricher does with the message [code plugins/wh/agents/impl-enrich.md:59]
+- `plugins/wh/skills/implementation/LANES.md:56` (§ 3, step 5) — `MAIN MOVED` list rides on the next `WAVE` message [code plugins/wh/skills/implementation/LANES.md:56]
+- `plugins/wh/skills/implementation/scripts/scope.sh:15` — the `Owns:`/`May touch`/`Union:` reader the moved-files check reuses [code plugins/wh/skills/implementation/scripts/scope.sh:15]
+- `SKILL.md` has no `WAVE` mention (grep): nothing changes there [code plugins/wh/skills/implementation/SKILL.md]
+- `plugins/wh/skills/implementation/scripts/acceptance.py:85` — reused; line format `<id> · exit <n> · <command>` [code plugins/wh/skills/implementation/scripts/acceptance.py:85]
+- `plugins/wh/skills/implementation/scripts/board.sh:15` — board line `<date> | <who> | <KIND> | <text>` the `CONTRACT` grep reads [code plugins/wh/skills/implementation/scripts/board.sh:15]
 - `tests/test_scripts.py`, `docs/MANUAL.md:22`, `docs/MANUAL.md:387` — test and docs [code docs/MANUAL.md:387]
 
 ## Code references
@@ -31,4 +34,5 @@ Owner: "`wave_prep.sh`: anexo da mensagem WAVE ao enricher = acceptance.py + gre
 - Owner's script backlog (2026-11-09).
 
 ## Open questions
-- Exact `WAVE` protocol today in SKILL.md/LANES.md (who sends it, when) — enricher to locate.
+- Exact `WAVE` protocol today in SKILL.md/LANES.md (who sends it, when) — enricher to locate. Located: `LANES.md:34` and `impl-enrich.md:59` (see Locations).
+- At the tip every pending item is expected red (not done yet): what does "something came out red" mean as the trigger for calling the enricher?

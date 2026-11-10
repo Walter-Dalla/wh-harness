@@ -21,8 +21,10 @@ Today the profile's commands live in prose (§ Build, § Tests, § Checks, § Di
 - `plugins/wh/skills/implementation/PROFILE.md` (§ Template, `##` sections from line 10) — new block or section [code plugins/wh/skills/implementation/PROFILE.md:5]
 - `plugins/wh/skills/adopt/scripts/check.py` (`Check.profile`, `Check.profiles`) — validation of the block [code plugins/wh/skills/adopt/scripts/check.py:72]
 - `.claude/profile/implementation.md` — this repo's own profile gets the block (protected file: owner reviews) [doc .claude/profile/implementation.md]
-- `tests/test_adopt.py` or `tests/test_scripts.py` — check.py test of the block [inferred]
-- `docs/MANUAL.md` (§ 2 profile injection, § 5 source formats) — document the block [inferred]
+- `tests/test_adopt.py:48` (`test_demo_profiles_and_sources_are_ok_and_graph_builds`) and `:64` — the demo profile must stay `OK`; new check.py test of the block [code tests/test_adopt.py:48]
+- `examples/demo/.claude/profile/implementation.md` — fixture gets the block, or `tests/test_adopt.py:48` goes red [code tests/test_adopt.py:50]
+- `plugins/wh/skills/profile/SKILL.md:35` (§ 4 Write) — how the block is written [code plugins/wh/skills/profile/SKILL.md:35]
+- `docs/MANUAL.md:36` (§ 2) and `:210` (§ 5) — document the block [code docs/MANUAL.md:210]
 
 ## Code references
 - `Check.profile` `plugins/wh/skills/adopt/scripts/check.py:72` — compares profile `##` headings with the template's [code plugins/wh/skills/adopt/scripts/check.py:72]

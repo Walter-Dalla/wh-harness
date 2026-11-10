@@ -15,11 +15,13 @@ Phase 1 runs `intake.sh` before `impl_env.sh` (the slug comes from the pending f
 2. Or `intake.sh` reads the folder at `<remote>/<main>` after a fetch.
 
 ## Locations
-- `plugins/wh/skills/implementation/SKILL.md` (§ 1 Environment) — order of the two scripts.
-- `plugins/wh/skills/implementation/scripts/impl_env.sh` — optional pull-only mode.
+- `plugins/wh/skills/implementation/SKILL.md:37` (§ 1 Environment, Intake bullet) and `:38` (`impl_env.sh` bullet) — order of the two scripts [code plugins/wh/skills/implementation/SKILL.md:37]
+- `plugins/wh/skills/implementation/scripts/impl_env.sh:15` (slug and option parsing, lines 15–24) and `:33` (pull) — `--pull-only` mode [code plugins/wh/skills/implementation/scripts/impl_env.sh:33]
+- `plugins/wh/skills/implementation/ENVIRONMENT.md:21` (§ Scripts, `impl_env.sh` row) — new mode [code plugins/wh/skills/implementation/ENVIRONMENT.md:21]
+- `tests/test_scripts.py:270` (`test_impl_env_*`) — new test [code tests/test_scripts.py:270]
 
 ## Code references
-- `plugins/wh/skills/implementation/scripts/impl_env.sh` — `--no-pull` flag already exists.
+- `plugins/wh/skills/implementation/scripts/impl_env.sh:21` — `--no-pull` flag already exists [code plugins/wh/skills/implementation/scripts/impl_env.sh:21]
 
 ## Other references
 - `docs/reports/2026-11-09-pending-intake.md` § Open items.

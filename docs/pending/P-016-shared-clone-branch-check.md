@@ -17,8 +17,8 @@ Owner (play-store retro): "regra em COMMON.md § Git / skill implementation: che
 ## Locations
 - `plugins/wh/skills/profile/COMMON.md:15` (§ Git) — "Checkout shared with other sessions: `git branch --show-current` before committing." [code plugins/wh/skills/profile/COMMON.md:15]
 - `plugins/wh/skills/implementation/SKILL.md:63` (§ 3 Integration worktree) — "you never `git switch`, merge or commit on it" [code plugins/wh/skills/implementation/SKILL.md:63]
-- `plugins/wh/skills/implementation/SKILL.md:34` (§ 1 Environment) — candidate for the pre-check [inferred]
-- `plugins/wh/skills/implementation/scripts/impl_env.sh` — refuses a clone on the wrong branch (test `test_impl_env_refuses_dirty_clone_wrong_branch_and_bad_slug`) [code tests/test_scripts.py:294]
+- `plugins/wh/skills/implementation/SKILL.md:38` (§ 1 Environment, `ENV FAILED` wrong branch = stop) — the place where an orchestrator is tempted to switch the branch itself [code plugins/wh/skills/implementation/SKILL.md:38]
+- `plugins/wh/skills/implementation/scripts/impl_env.sh:30` — refuses a clone on the wrong branch (test `test_impl_env_refuses_dirty_clone_wrong_branch_and_bad_slug`) [code tests/test_scripts.py:294]
 
 ## Code references
 - `test_impl_env_refuses_dirty_clone_wrong_branch_and_bad_slug` `tests/test_scripts.py:294` [code tests/test_scripts.py:294]
@@ -27,5 +27,5 @@ Owner (play-store retro): "regra em COMMON.md § Git / skill implementation: che
 - Play-store run retro (outside this repo) [inferred].
 
 ## Open questions
-- Is `ListAgents` a tool the orchestrator has in every session (name and availability)?
+- Is `ListAgents` a tool the orchestrator has in every session (name and availability)? Enricher: the tool exists in Claude Code 2.1.322 (binary strings: `ListAgents`, formerly `ListPeers`, lists subagents, teammates and "other local Claude sessions on this machine"); availability per session not proven [code ~/.local/share/claude/versions/2.1.322]
 - Where did the `git checkout main` happen given SKILL.md:63 already forbids it — a phase not covered (e.g. close/cleanup)?

@@ -17,13 +17,15 @@ Owner: "`new_names.py <diff> <glossário>`: identificadores novos sem termo no g
 4. Test in `tests/test_scripts.py`, cited in the skill/agent, `docs/MANUAL.md` §1 table and §7.
 
 ## Locations
-- `plugins/wh/skills/implementation/scripts/new_names.py` — new script [inferred]
+- `plugins/wh/skills/implementation/scripts/new_names.py` (new) — new script; imports the glossary parser as `check.py:140` does [code plugins/wh/skills/adopt/scripts/check.py:140]
 - `plugins/wh/agents/impl-qa.md:29` (gate 3 Names) — consumer of the output [code plugins/wh/agents/impl-qa.md:29]
 - `plugins/wh/scripts/prompt_graph.py` — already parses the glossary (`context.json` `glossario`); candidate for reuse [code plugins/wh/scripts/prompt_graph.py:22]
 - `tests/test_scripts.py`, `docs/MANUAL.md:22`, `docs/MANUAL.md:387` — test and docs [code docs/MANUAL.md:387]
 
 ## Code references
 - `CONFIG` `plugins/wh/scripts/prompt_graph.py:22` — `.claude/profile/context.json`, source of the glossary path [code plugins/wh/scripts/prompt_graph.py:22]
+- `parse_glossary` `plugins/wh/scripts/prompt_graph.py:138` — entries with normalized `aliases` (business, code, avoid) [code plugins/wh/scripts/prompt_graph.py:138]
+- `key` `plugins/wh/scripts/prompt_graph.py:82` — normalization shared with the hook [code plugins/wh/scripts/prompt_graph.py:82]
 
 ## Other references
 - Owner's script backlog (2026-11-09). Glossary format: `docs/MANUAL.md` § 5.1.

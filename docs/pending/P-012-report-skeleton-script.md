@@ -17,8 +17,9 @@ Owner: "`report_skeleton.py <slug>`: esqueleto do relatório a partir de board, 
 4. Test in `tests/test_scripts.py`, cited in the skill, `docs/MANUAL.md` §1 table and §7.
 
 ## Locations
-- `plugins/wh/skills/implementation/scripts/report_skeleton.py` — new script [inferred]
-- `plugins/wh/skills/implementation/REPORT.md` — report format the skeleton follows [doc docs/MANUAL.md]
+- `plugins/wh/skills/implementation/scripts/report_skeleton.py` (new) — new script [code plugins/wh/skills/implementation/scripts/acceptance.py:1]
+- `plugins/wh/skills/implementation/REPORT.md:16` — report format the skeleton follows (template lines 16–38) [code plugins/wh/skills/implementation/REPORT.md:16]
+- `plugins/wh/skills/implementation/ENVIRONMENT.md:16` (§ Scripts table) — new row [code plugins/wh/skills/implementation/ENVIRONMENT.md:16]
 - `plugins/wh/skills/implementation/SKILL.md:128` (§ 6 Close, step 2 Report) — cites the script [code plugins/wh/skills/implementation/SKILL.md:128]
 - `tests/test_scripts.py`, `docs/MANUAL.md:22`, `docs/MANUAL.md:387` — test and docs [code docs/MANUAL.md:387]
 

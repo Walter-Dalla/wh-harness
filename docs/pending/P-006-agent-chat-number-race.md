@@ -15,11 +15,11 @@ related: []
 2. Test: two `ask` calls in parallel give different `NN`.
 
 ## Locations
-- `plugins/wh/skills/implementation/scripts/agent_chat.sh` (`ask`, numbering) — lock or retry.
-- `tests/test_scripts.py` — parallel case.
+- `plugins/wh/skills/implementation/scripts/agent_chat.sh:26` (`ask`, numbering, lines 26–30) — `mkdir` lock, `NN` = highest prefix + 1 [code plugins/wh/skills/implementation/scripts/agent_chat.sh:26]
+- `tests/test_scripts.py:483` (`test_agent_chat_creates_numbered_files_and_appends_answers`) — new test beside it: parallel case and held lock [code tests/test_scripts.py:483]
 
 ## Code references
-- `plugins/wh/skills/implementation/scripts/agent_chat.sh` — `ask` numbering.
+- `plugins/wh/skills/implementation/scripts/agent_chat.sh:26` — `ask` numbering = count of files + 1 [code plugins/wh/skills/implementation/scripts/agent_chat.sh:26]. Only the orchestrator runs `ask` (plugins/wh/skills/implementation/ENVIRONMENT.md:23), so the race needs parallel Bash calls of one session, not two lanes. Measured 2026-11-10: 8 parallel `ask` gave 1–2 duplicated `NN` in 5 of 5 rounds.
 
 ## Other references
 - `docs/reports/2026-11-09-pending-intake.md` § QA.

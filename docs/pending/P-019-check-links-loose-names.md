@@ -19,7 +19,7 @@ Confirmed on main: `check.py` prints `WARN links … CLAUDE.md → PROFILE.md; C
 - `CLAUDE.md:6` — `PROFILE.md` loose [code CLAUDE.md:6]
 - `CLAUDE.md:9` — `scope.sh`, `preflight.sh`, `check.py` loose (protected file: owner reviews) [code CLAUDE.md:9]
 - `plugins/wh/skills/adopt/scripts/check.py:192` (`Check.links`) — token filter and `os.path.exists(self.p(tok))` [code plugins/wh/skills/adopt/scripts/check.py:192]
-- `tests/test_adopt.py` / `tests/test_scripts.py` — links test [inferred]
+- `tests/test_adopt.py:119` (`test_links_warns_on_cited_paths_that_do_not_exist`) — links test; new case beside it [code tests/test_adopt.py:119]
 
 ## Code references
 - `Check.links` `plugins/wh/skills/adopt/scripts/check.py:192` — cited-path check; a token without `/` but with a known extension is checked at the root [code plugins/wh/skills/adopt/scripts/check.py:200]
@@ -28,4 +28,4 @@ Confirmed on main: `check.py` prints `WARN links … CLAUDE.md → PROFILE.md; C
 - `docs/MANUAL.md` § 6 Validation.
 
 ## Open questions
-- If check.py resolves loose names: unique basename match in the repo (`git ls-files`) = OK, ambiguous or none = WARN?
+- If check.py resolves loose names: unique basename match in the repo (`git ls-files`) = OK, ambiguous or none = WARN? Enricher: `PROFILE.md` has 7 files by design (one per skill), so "ambiguous = WARN" would keep the WARN the owner reported [code git ls-files]
