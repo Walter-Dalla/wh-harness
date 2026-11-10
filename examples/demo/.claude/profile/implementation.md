@@ -2,6 +2,13 @@
 
 Illustrative example: the demo has no code; the commands below only show the format of each section. In a real repo, each line comes from a source in the repo.
 
+## Commands
+build: `dotnet build --nologo -v q` [inferred]
+suite: `dotnet test --nologo -v q` [inferred]
+typecheck: `dotnet format --verify-no-changes` [inferred]
+service: `ASPNETCORE_URLS=http://localhost:<port> DB_NAME=bakery-<slug>-<port> dotnet run --project src` [inferred]
+health: `curl -sf localhost:<port>/health` [inferred]
+
 ## Build
 `dotnet build --nologo -v q` (no new warning = green; verdict by the exit). [inferred]
 

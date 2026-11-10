@@ -55,6 +55,58 @@ class ChecarTest(unittest.TestCase):
         self.assertIn('3 features', grafo['detalhe'])
         self.assertTrue(any(it['item'] == 'profile _common' and '[inferred]' in it['detalhe'] for it in itens))
 
+    def edit(self, root, rel, old, new):
+        path = os.path.join(root, rel)
+        with open(path, encoding='utf-8') as fh:
+            text = fh.read()
+        self.assertIn(old, text)
+        with open(path, 'w', encoding='utf-8') as fh:
+            fh.write(text.replace(old, new))
+
+    def test_commands_block_missing_keys_and_pipe_are_reported(self):
+        def commands(itens):
+            return [(it['estado'], it['detalhe']) for it in itens
+                    if it['item'] == 'profile implementation' and it['detalhe'].startswith('Commands:')]
+        _, _, itens = run(DEMO)
+        self.assertEqual(commands(itens), [])
+        repo = os.path.join(self.tmp, 'repo')
+        shutil.copytree(DEMO, repo)
+        rel = '.claude/profile/implementation.md'
+        self.edit(repo, rel, 'health: `curl -sf localhost:<port>/health` [inferred]\n', '')
+        self.edit(repo, rel, 'typecheck: `dotnet format --verify-no-changes`', 'typecheck: dotnet format --verify-no-changes')
+        self.edit(repo, rel, 'suite: `dotnet test --nologo -v q`', 'suite: `dotnet test --nologo -v q | tail -5`')
+        code, pares, itens = run(repo)
+        self.assertEqual(code, 1)
+        self.assertIn(('profile implementation', 'MISSING'), pares)
+        self.assertIn(('MISSING', 'Commands: missing or malformed keys: typecheck, health'), commands(itens))
+        self.assertIn(('WARN', 'Commands: suite has a pipe (the verdict is the exit code: no pipe, or set -o pipefail)'), commands(itens))
+        self.edit(repo, rel, '| tail -5', '')
+        _, _, itens = run(repo)
+        self.assertNotIn('WARN', [s for s, _ in commands(itens)])
+        # `—` is a valid value: a repo without that command
+        self.edit(repo, rel, 'typecheck: dotnet format --verify-no-changes', 'typecheck: —')
+        self.edit(repo, rel, 'service: `', 'health: — [inferred]\nservice: `')
+        _, _, itens = run(repo)
+        self.assertEqual(commands(itens), [])
+
+    def test_old_perfil_folder_is_reported_with_the_rename(self):
+        def folder(itens):
+            return [it for it in itens if it['item'] == 'profile folder']
+        old = os.path.join(self.tmp, 'old')
+        self.write(old, '.claude/perfil/_comum.md', '# Perfil comum\n')
+        code, pares, itens = run(old)
+        self.assertEqual(code, 1)
+        self.assertIn(('profile folder', 'MISSING'), pares)
+        self.assertIn('git mv .claude/perfil .claude/profile', folder(itens)[0]['detalhe'])
+        repo = os.path.join(self.tmp, 'repo')
+        shutil.copytree(DEMO, repo)
+        _, _, itens = run(repo)
+        self.assertEqual(folder(itens), [])
+        self.write(repo, '.claude/perfil/_comum.md', '# Perfil comum\n')
+        _, pares, itens = run(repo)
+        self.assertIn(('profile folder', 'WARN'), pares)
+        self.assertEqual(len(folder(itens)), 1)
+
     def copy_agents(self, repo):
         tpl_dir = os.path.join(PLUGIN, 'skills', 'adopt', 'templates', 'agents')
         for name in os.listdir(tpl_dir):
@@ -135,6 +187,17 @@ class ChecarTest(unittest.TestCase):
                 fh.write(re.sub(r'`[^`\s]*(?:/|\.md)[^`\s]*`', '`x`', text))
         code, pares, itens = run(repo)
         self.assertIn(('links', 'OK'), pares, [it for it in itens if it['item'] == 'links'])
+
+    def test_links_resolve_bare_names_by_basename(self):
+        repo = os.path.join(self.tmp, 'repo')
+        shutil.copytree(DEMO, repo)
+        self.write(repo, 'src/tools/helper.sh', '#!/bin/sh\n')
+        self.write(repo, 'CLAUDE.md', 'Run `helper.sh`, see `check.py`, never `~/.claude/`, and `nowhere.sh`.\n')
+        code, pares, itens = run(repo)
+        link = next(it for it in itens if it['item'] == 'links')
+        self.assertIn('CLAUDE.md → nowhere.sh', link['detalhe'])
+        for ok in ('helper.sh', 'check.py', '~/.claude/'):
+            self.assertNotIn(ok, link['detalhe'])
 
     def test_agent_templates_have_frontmatter_marker_and_no_project_fact(self):
         tpl_dir = os.path.join(PLUGIN, 'skills', 'adopt', 'templates', 'agents')

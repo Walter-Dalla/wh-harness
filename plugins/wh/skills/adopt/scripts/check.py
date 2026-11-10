@@ -12,6 +12,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -25,6 +26,8 @@ CONTEXT_KEYS = {'glossario', 'features', 'indice_features', 'codegraph', 'class_
 NO_PROFILE = {'profile', 'retro', 'adopt'}
 AGENTS_DIR = os.path.join('.claude', 'agents')
 TEMPLATE_MARK = re.compile(r'<!--\s*wh-template:\s*(\S+)\s+(\d+)\s*-->')
+COMMAND_KEYS = ('build', 'suite', 'typecheck', 'service', 'health')
+COMMAND_LINE = re.compile(r'^(build|suite|typecheck|service|health):[ \t]+(`[^`]+`|—)')
 
 
 def headings(text):
@@ -50,6 +53,7 @@ class Check:
     def __init__(self, root, plugin):
         self.root, self.plugin = root, plugin
         self.items = []
+        self._names = None
 
     def add(self, state, item, detail=''):
         self.items.append({'estado': state, 'item': item, 'detalhe': detail})
@@ -69,6 +73,14 @@ class Check:
                 return
         self.add('MISSING', 'repo map', 'CLAUDE.md or AGENTS.md at the root (first source of the profile skill)')
 
+    def legacy(self):
+        """A `.claude/perfil/` folder is the profile layout before 0.7.0: renamed files and Portuguese headings."""
+        if not os.path.isdir(self.p('.claude', 'perfil')):
+            return
+        state = 'WARN' if os.path.isdir(self.p(PROFILE_DIR)) else 'MISSING'
+        self.add(state, 'profile folder', '.claude/perfil/ is the layout before 0.7.0: git mv .claude/perfil .claude/profile, '
+                 '_comum.md → _common.md, contexto.json → context.json, then /wh:profile (English headings)')
+
     def profile(self, path, tpl, limit, name):
         text = read(path)
         if text is None:
@@ -79,6 +91,8 @@ class Check:
             self.add('MISSING', 'profile ' + name, 'missing sections: ' + ', '.join(missing))
         else:
             self.add('OK', 'profile ' + name)
+        if name == 'implementation' and 'Commands' in headings(text):
+            self.commands(text, name)
         lines = len(text.splitlines())
         if lines > limit:
             self.add('WARN', 'profile ' + name, '%d lines (target ≤ %d): the excess becomes a repo doc' % (lines, limit))
@@ -88,6 +102,22 @@ class Check:
         empty = [s for s in headings(text) if re.search(r'^## %s\n+—' % re.escape(s), text, re.M)]
         if empty:
             self.add('WARN', 'profile ' + name, 'sections —: ' + ', '.join(empty))
+
+    def commands(self, text, name):
+        """§ Commands: one `<key>: `<command>`` (or `—`) line per key; build and suite judged by their exit code."""
+        m = re.search(r'^## Commands[ \t]*\n(.*?)(?=^## |\Z)', text, re.M | re.S)
+        found = {}
+        for line in (m.group(1) if m else '').splitlines():
+            km = COMMAND_LINE.match(line)
+            if km:
+                found.setdefault(km.group(1), km.group(2))
+        bad = [k for k in COMMAND_KEYS if k not in found]
+        if bad:
+            self.add('MISSING', 'profile ' + name, 'Commands: missing or malformed keys: ' + ', '.join(bad))
+        for key in ('build', 'suite'):
+            cmd = found.get(key, '')
+            if '|' in cmd and 'pipefail' not in cmd:
+                self.add('WARN', 'profile ' + name, 'Commands: %s has a pipe (the verdict is the exit code: no pipe, or set -o pipefail)' % key)
 
     def profiles(self):
         self.profile(self.p(PROFILE_DIR, '_common.md'), os.path.join(self.plugin, 'skills', 'profile', 'COMMON.md'), LIMIT_COMMON, '_common')
@@ -189,6 +219,22 @@ class Check:
         if not os.path.exists(self.p('.git')):  # a `git worktree` has a .git file, not a folder
             self.add('WARN', 'git', 'root is not a git repository (/wh:implementation worktrees need one)')
 
+    def basenames(self):
+        """File names of the repository (`git ls-files`, else a walk without `.git`) and of the plugin, built once."""
+        if self._names is None:
+            names = set()
+            try:
+                out = subprocess.run(['git', '-C', self.root, 'ls-files', '-z'], capture_output=True, text=True, check=True).stdout
+                names.update(os.path.basename(f) for f in out.split('\0') if f)
+            except (OSError, subprocess.CalledProcessError):
+                for _, dirs, files in os.walk(self.root):
+                    dirs[:] = [d for d in dirs if d != '.git']
+                    names.update(files)
+            for _, _, files in os.walk(self.plugin):
+                names.update(files)
+            self._names = names
+        return self._names
+
     def links(self):
         """Every path cited in backticks by the map, the profiles and context.json exists (adopt § 6.3)."""
         files = [self.p(n) for n in ('CLAUDE.md', 'AGENTS.md')] + sorted(glob.glob(self.p(PROFILE_DIR, '*.md')))
@@ -198,9 +244,10 @@ class Check:
             if text is None:
                 continue
             for tok in set(re.findall(r'`([^`\s]+)`', text)):
-                if not re.search(r'[/\\]|\.(md|json|ya?ml|toml|sh|py|cs|ts|js|csproj|sln)$', tok) or re.search(r'[<>*$§{}|…]|^https?:|^[-./]', tok):
+                if not re.search(r'[/\\]|\.(md|json|ya?ml|toml|sh|py|cs|ts|js|csproj|sln)$', tok) or re.search(r'[<>*$§{}|…]|^https?:|^[-./~]', tok):
                     continue
-                if not os.path.exists(self.p(tok.rstrip('/'))):
+                bare = not re.search(r'[/\\]', tok)  # a bare file name may live anywhere in the repo or the plugin
+                if not os.path.exists(self.p(tok.rstrip('/'))) and not (bare and tok in self.basenames()):
                     bad.append('%s → %s' % (os.path.relpath(path, self.root), tok))
         cfg_path = self.p(PROFILE_DIR, 'context.json')
         try:
@@ -240,6 +287,7 @@ class Check:
     def run(self):
         self.git()
         self.repo_map()
+        self.legacy()
         self.profiles()
         self.shadow()
         self.context()

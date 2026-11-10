@@ -22,7 +22,7 @@ A **profile** is what a generic skill needs to know about the repository and can
 
 ## 2. Sources
 
-For each missing section, in this order, stopping at the first that answers: `CLAUDE.md`/`AGENTS.md` and the docs they point at; `.claude/profile/*.md` already written; the project's old skill in `.claude/skills/<skill>/SKILL.md` (migration: its facts move into the profile); CI workflows (`.github/workflows/*`); build and dev scripts (`package.json`, `Makefile`, `*.sln`, `pyproject.toml`, `scripts/`, `deploy/`); `README`. Each profile line ends with its source: `[CLAUDE.md]`, `[ci: tests.yml]`, `[scripts/dev.sh]`, `[old skill]`, `[inferred]`. Repo without an answer: the section stays `—` (the skill skips the phase that depends on it and says so).
+For each missing section, in this order, stopping at the first that answers: `CLAUDE.md`/`AGENTS.md` and the docs they point at; `.claude/profile/*.md` already written; a profile of before 0.7.0 in `.claude/perfil/` (`_comum.md`, `<skill>.md`, Portuguese headings: its facts move to the section of the same meaning); the project's old skill in `.claude/skills/<skill>/SKILL.md` (migration: its facts move into the profile); CI workflows (`.github/workflows/*`); build and dev scripts (`package.json`, `Makefile`, `*.sln`, `pyproject.toml`, `scripts/`, `deploy/`); `README`. Each profile line ends with its source: `[CLAUDE.md]`, `[ci: tests.yml]`, `[scripts/dev.sh]`, `[old skill]`, `[inferred]`. Repo without an answer: the section stays `—` (the skill skips the phase that depends on it and says so).
 
 **Done when every missing section has text with a source or `—`.**
 
@@ -32,11 +32,11 @@ For each missing section, in this order, stopping at the first that answers: `CL
 
 ## 4. Write
 
-Facts, one line per fact, commands in backticks and complete (with `<port>`, `<slug>`, `<filter>` where the skill substitutes). Nothing `_common.md` already says: cite `_common § Git`. No procedure ("first do X, then Y"): that belongs to the skill. Target: `_common.md` ≤ 40 lines, `<skill>.md` ≤ 60; past that, the excess becomes a repo doc the profile points at.
+Facts, one line per fact, commands in backticks and complete (with `<port>`, `<slug>`, `<filter>` where the skill substitutes). The implementation profile's § Commands is written as `` <key>: `<command>` `` lines, the five keys, `—` where the repo has none, and its prose sections cite the key instead of repeating the command. Nothing `_common.md` already says: cite `_common § Git`. No procedure ("first do X, then Y"): that belongs to the skill. Target: `_common.md` ≤ 40 lines, `<skill>.md` ≤ 60; past that, the excess becomes a repo doc the profile points at.
 
 `prompt-graph` hook: `.claude/profile/context.json` missing and the repo has a glossary or a feature map (`_common § Docs`) = write it with only the keys that differ from the default (`glossario`, `features`, `indice_features`, `codegraph`, `idioma`; defaults in `DEFAULTS` of `${CLAUDE_PLUGIN_ROOT}/scripts/prompt_graph.py`). Neither source: do not create the file.
 
-Migration of the project's old skill: once the profile holds its facts, `git rm -r .claude/skills/<skill>` (the same name in the project shadows the user's skill). Scripts and harness the old skill carried go to a repo folder (`deploy/`, `tools/`, `scripts/`) and the profile points there.
+Migration of the project's old skill: once the profile holds its facts, `git rm -r .claude/skills/<skill>` (the same name in the project shadows the user's skill). Scripts and harness the old skill carried go to a repo folder (`deploy/`, `tools/`, `scripts/`) and the profile points there. Migration of a profile of before 0.7.0: once the new profile holds its facts, `git rm -r .claude/perfil` (or first `git mv .claude/perfil/contexto.json .claude/profile/context.json` when the hook was on).
 
 **Done when `.claude/profile/_common.md` and `.claude/profile/<skill>.md` have every template section, every line with a source, and the project's old skill (if there was one) is gone.**
 
