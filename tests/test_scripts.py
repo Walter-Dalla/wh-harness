@@ -81,6 +81,18 @@ class ScriptsTest(unittest.TestCase):
         self.assertNotIn('union/c.txt', out)
         self.assertNotIn('src/a.cs', out)
 
+    def test_scope_classify_prints_one_label_per_file(self):
+        for f in ('src/a.cs', 'other/b.cs', 'union/c.txt', 'lixo.cs'):
+            self.write(f)
+        self.commit_all()
+        code, out = run(SCOPE, self.repo, '--classify', self.lane(), self.base)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(sorted(out.splitlines()),
+                         ['MAY: other/b.cs', 'OUTSIDE: lixo.cs', 'OWN: src/a.cs', 'UNION: union/c.txt'])
+        code, out = run(SCOPE, self.repo, '--classify', self.lane('# f\nOwns: nothing in backticks\n'), self.base)
+        self.assertEqual(code, 2)
+        self.assertIn('SCOPE FAILED', out)
+
     def test_scope_ok_when_everything_is_owned(self):
         self.write('src/a.cs')
         self.write('src/deep/b.cs')
@@ -307,6 +319,36 @@ class ScriptsTest(unittest.TestCase):
         self.assertIn("on 'other', not main", out)
         self.assertFalse(os.path.exists(os.path.join(self.repo, '.impl')))
 
+    def test_impl_env_pull_only_pulls_and_creates_nothing(self):
+        remote = self.bare_remote()
+        other = os.path.join(self.tmp, 'other')
+        git(self.tmp, 'clone', '-q', remote, other)
+        os.makedirs(os.path.join(other, 'docs', 'pending'))
+        with open(os.path.join(other, 'docs', 'pending', 'P-001-x.md'), 'w', encoding='utf-8') as fh:
+            fh.write('---\nid: P-001\nstatus: open\n---\n')
+        git(other, 'add', '-A')
+        git(other, 'commit', '-q', '-m', 'pending')
+        git(other, 'push', '-q', 'origin', 'main')
+        pushed = git(other, 'rev-parse', 'HEAD')
+
+        code, out = run(ENV, self.repo, '--pull-only', PATH='/usr/bin:/bin')
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out.splitlines()[-1], 'PULL OK')
+        env = dict(l.split('=', 1) for l in out.splitlines() if '=' in l)
+        self.assertEqual(sorted(env), ['BASE', 'MAIN', 'REMOTE', 'ROOT'])
+        self.assertEqual(env['BASE'], pushed)
+        self.assertTrue(os.path.isfile(os.path.join(self.repo, 'docs', 'pending', 'P-001-x.md')))
+        self.assertFalse(os.path.exists(os.path.join(self.repo, '.impl')))
+        self.assertFalse(os.path.exists(os.path.join(self.repo, '.claude', 'worktrees')))
+
+        code, out = run(ENV, self.repo, '--pull-only', '--no-pull')
+        self.assertEqual(code, 1)
+        self.assertIn('ENV FAILED: --pull-only with --no-pull', out)
+        git(self.repo, 'switch', '-q', '-c', 'other')
+        code, out = run(ENV, self.repo, '--pull-only')
+        self.assertEqual(code, 1)
+        self.assertIn('ENV FAILED: clone is on', out)
+
     # ---- board.sh
 
     def test_board_appends_a_timestamped_line(self):
@@ -478,6 +520,16 @@ class ScriptsTest(unittest.TestCase):
         code, out = run(intake, self.tmp, os.path.join(self.tmp, 'missing'))
         self.assertEqual(code, 2, out)
 
+    def test_intake_next_counts_ids_removed_from_the_folder(self):
+        intake = os.path.join(SCRIPTS, 'intake.sh')
+        self.write('docs/pending/P-004-x.md', '---\nid: P-004\nstatus: open\n---\n')
+        self.commit_all('add P-004')
+        git(self.repo, 'rm', '-q', 'docs/pending/P-004-x.md')
+        git(self.repo, 'commit', '-q', '-m', 'land P-004')
+        self.assertEqual(run(intake, self.tmp, self.repo, '--next'), (0, 'P-005\n'))
+        self.write('docs/pending/P-002-y.md', '---\nid: P-002\nstatus: open\n---\n')  # uncommitted, lower
+        self.assertEqual(run(intake, self.tmp, self.repo, '--next'), (0, 'P-005\n'))
+
     # ---- agent_chat.sh
 
     def test_agent_chat_creates_numbered_files_and_appends_answers(self):
@@ -519,6 +571,29 @@ class ScriptsTest(unittest.TestCase):
             code, out = run(chat_sh, self.tmp, *args)
             self.assertEqual(code, 2, args)
             self.assertIn('AGENT_CHAT FAILED: usage: agent_chat.sh', out)
+
+    def test_agent_chat_parallel_asks_get_distinct_numbers_and_a_held_lock_fails(self):
+        chat_sh = os.path.join(SCRIPTS, 'agent_chat.sh')
+        impl = os.path.join(self.tmp, 'impl')
+        chat = os.path.join(os.path.realpath(impl), 'agent_chat')
+        os.makedirs(chat)
+        procs = [subprocess.Popen(['bash', chat_sh, impl, 'ask', f'f{i}', f'demo-{i}', 'qa', 'q'], cwd=self.tmp,
+                                  env=GIT_ENV, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+                 for i in range(1, 9)]
+        for p in procs:
+            out, _ = p.communicate()
+            self.assertEqual(p.returncode, 0, out)
+        self.assertEqual(sorted(name[:2] for name in os.listdir(chat)), [f'{i:02d}' for i in range(1, 9)])
+        self.assertFalse(os.path.exists(os.path.join(chat, '.lock')))
+
+        with open(os.path.join(chat, '.lock'), 'w', encoding='utf-8'):
+            pass
+        code, out = run(chat_sh, self.tmp, impl, 'ask', 'f9', 'demo-9', 'qa', 'q', WH_CHAT_LOCK_TRIES='2')
+        self.assertEqual(code, 1, out)
+        self.assertIn('AGENT_CHAT FAILED:', out)
+        self.assertIn('.lock is held', out)
+        self.assertEqual(len([n for n in os.listdir(chat) if n.endswith('.md')]), 8)
+        self.assertTrue(os.path.isfile(os.path.join(chat, '.lock')))
 
 
 if __name__ == '__main__':

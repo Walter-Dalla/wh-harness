@@ -2,17 +2,21 @@
 # Phase 1 of /wh:implementation, deterministic: checks the clone, prepares the task folders and the integration
 # worktree, and prints the facts every later prompt needs, one `KEY=VALUE` per line.
 #
-#   impl_env.sh <slug> [--main <branch>] [--remote <name>] [--no-pull]
+#   impl_env.sh <slug> [--main <branch>] [--remote <name>] [--no-pull] | --pull-only [--main <branch>] [--remote <name>]
 #
 # Run at the clone root, on the main branch, clean. Exit 1 with `ENV FAILED: <reason>` when the session cannot
 # go on (not the root, wrong branch, local changes, remote unreachable); nothing is changed before the checks pass.
 # Idempotent: an existing integration worktree on impl/<slug> is reused.
+# --pull-only: the same checks and `git pull --ff-only`, then ROOT=, MAIN=, REMOTE=, BASE= and `PULL OK`; nothing
+# else is changed (no exclude line, no .impl/, no worktree, no gh, no codegraph).
 set -u
 
 fail() { echo "ENV FAILED: $*"; exit 1; }
 
-[ $# -ge 1 ] || fail "usage: impl_env.sh <slug> [--main <branch>] [--remote <name>] [--no-pull]"
-slug=$1; shift
+[ $# -ge 1 ] || fail "usage: impl_env.sh <slug> [--main <branch>] [--remote <name>] [--no-pull] | --pull-only [--main <branch>] [--remote <name>]"
+pull_only=0
+if [ "$1" = --pull-only ]; then pull_only=1; slug=; else slug=$1; fi
+shift
 main=main; remote=origin; pull=1
 while [ $# -gt 0 ]; do
   case $1 in
@@ -22,7 +26,11 @@ while [ $# -gt 0 ]; do
     *) fail "unknown option $1" ;;
   esac
 done
-case $slug in *[!a-z0-9-]*|'') fail "slug '$slug' is not kebab-case" ;; esac
+if [ "$pull_only" = 1 ]; then
+  [ "$pull" = 1 ] || fail "--pull-only with --no-pull"
+else
+  case $slug in *[!a-z0-9-]*|'') fail "slug '$slug' is not kebab-case" ;; esac
+fi
 
 root=$(git rev-parse --show-toplevel 2>/dev/null) || fail "not inside a git repository"
 [ "$root" = "$(pwd -P)" ] || fail "run at the repository root ($root), not in $(pwd -P)"
@@ -32,6 +40,15 @@ branch=$(git branch --show-current)
 git ls-remote --exit-code --heads "$remote" "$main" >/dev/null 2>&1 || fail "$remote/$main does not answer (gh auth setup-git?)"
 if [ "$pull" = 1 ]; then
   git pull --ff-only --quiet "$remote" "$main" || fail "git pull --ff-only failed"
+fi
+
+if [ "$pull_only" = 1 ]; then
+  echo "ROOT=$root"
+  echo "MAIN=$main"
+  echo "REMOTE=$remote"
+  echo "BASE=$(git rev-parse "$main")"
+  echo "PULL OK"
+  exit 0
 fi
 
 exclude=.git/info/exclude
