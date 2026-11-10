@@ -40,7 +40,7 @@ MODIFIERS = (r'(?:(?:export|default|public|private|protected|internal|static|sea
 KEYWORD_DECL = re.compile(r'^\s*' + MODIFIERS + r'(?:def|class|function\*?|const|let(?:\s+mut)?|var|interface|type|'
                           r'enum|struct|trait|record|fn|func(?:\s*\([^)]*\))?)\s+([A-Za-z_]\w*)')
 ASSIGN_DECL = re.compile(r'^\s*(?:(?:export|local|readonly|declare(?:\s+-\w+)?)\s+)?(?:self\.|this\.)?'
-                         r'([A-Za-z_]\w*)(\s*)(?::\s*[^=]+?)?(\s*)=(?!=)')
+                         r'([A-Za-z_]\w*)(\s*)(?::\s*[^=]+?)?(\s*)(?<![-+*/%&|^<>!])=(?!=)')
 SHELL_FUNC = re.compile(r'^\s*([A-Za-z_]\w*)\s*\(\)\s*\{')
 NOT_A_NAME = {'else', 'try', 'finally', 'lambda', 'return', 'elif', 'while', 'for', 'if'}
 LIMIT = 200
