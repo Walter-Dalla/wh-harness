@@ -112,6 +112,34 @@ class LanePromptTest(unittest.TestCase):
         with open(diff, encoding='utf-8') as fh:
             self.assertEqual(re.findall(r'^diff --git .*$', fh.read(), re.M), ['diff --git a/src/b.cs b/src/b.cs'])
 
+    def test_remote_and_main_options(self):
+        remote = os.path.join(self.tmp, 'remote.git')
+        git(self.repo, 'remote', 'add', 'up', remote)
+        git(self.repo, 'switch', '-q', '-c', 'trunk', self.base)
+        self.write('t.txt', 'trunk\n')
+        self.commit_all('trunk moved')
+        trunk = git(self.repo, 'rev-parse', 'HEAD')
+        git(self.repo, 'switch', '-q', 'impl/demo')
+        git(self.repo, 'merge', '-q', '--ff-only', 'trunk')
+        self.write('src/b.cs', 'small\n')
+        self.commit_all('demo-1: b')
+        git(self.repo, 'push', '-q', 'up', 'impl/demo')
+        tip = git(self.repo, 'rev-parse', 'HEAD')
+        diff = os.path.join(self.impl, 'qa', 'code.diff')
+        out = self.prompt('code', '--qa', '--remote', 'up', '--main', 'trunk')
+        self.assertEqual(out[2], 'Branch: impl/demo @ %s. Diff base: %s. Remote: up. Diff: %s.' % (tip, trunk, diff))
+        with open(diff, encoding='utf-8') as fh:
+            self.assertEqual(re.findall(r'^diff --git .*$', fh.read(), re.M), ['diff --git a/src/b.cs b/src/b.cs'])
+        out = self.prompt('code', '--qa', '--remote', 'up')  # default main: the diff base is where main stands
+        self.assertIn('Diff base: %s. Remote: up.' % self.base, out[2])
+        out = self.prompt('final', '--qa', '--remote', 'up', '--main', 'trunk')
+        self.assertEqual(out[2], 'Branch: impl/demo @ %s. Diff base: trunk. Remote: up. Touched areas: none.' % tip)
+        self.assertEqual(self.prompt('f1', '--remote', 'up')[2],
+                         'Branch: impl/demo-f1. Base: impl/demo @ %s. Remote: up.' % tip)
+        code, out = run(LANE_PROMPT, self.repo, 'demo', 'code', '--qa', '--remote', 'up', '--main', 'nobranch')
+        self.assertEqual(code, 1)
+        self.assertIn('LANE_PROMPT FAILED: ref nobranch missing', out)
+
     def test_final_qa(self):
         git(self.repo, 'push', '-q', 'origin', 'impl/demo')
         tip = git(self.repo, 'rev-parse', 'impl/demo')
