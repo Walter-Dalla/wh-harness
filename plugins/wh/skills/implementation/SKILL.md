@@ -101,7 +101,7 @@ Findings (type and severity in the QA file): **bug, standard, name or missing te
 
 ## 5. Final QA (the expensive run, once, at the tip of `impl/<slug>`)
 
-`<main>` moved on the remote during the task (`MAIN MOVED` from `merge_lane.sh`, or `git -C <intwt> fetch <remote>` followed by `git -C <intwt> rev-list --count HEAD..<remote>/<main>` above zero): merge it first, `git -C <intwt> merge --no-ff <remote>/<main> -m "impl: <main> into impl/<slug>"`, resolve, build and suite of the profile; the QA runs on what the PR will actually merge. Then push `impl/<slug>` and one `impl-qa` in mode `final`:
+`<main>` moved on the remote during the task (`MAIN MOVED` from `merge_lane.sh`, or `git -C <intwt> fetch <remote>` followed by `git -C <intwt> rev-list --count HEAD..<remote>/<main>` above zero): merge it first, `git -C <intwt> merge --no-ff <remote>/<main> -m "impl: <main> into impl/<slug>"`, resolve, then `${CLAUDE_PLUGIN_ROOT}/skills/implementation/scripts/profile_run.sh build <intwt>` and `profile_run.sh suite <intwt>` (verdict = the exit; `PROFILE_RUN FAILED` = profile § Build and § Tests by hand, [`LANES.md`](LANES.md) §3, step 8); the QA runs on what the PR will actually merge. Then push `impl/<slug>` and one `impl-qa` in mode `final`:
 
 ```text
 PLUGIN_ROOT=${CLAUDE_PLUGIN_ROOT}
@@ -116,7 +116,7 @@ Gates: <yes (small task: the four gates of mode code over the whole diff) | no>.
 
 `Agent(subagent_type: "wh:impl-qa", isolation: "worktree", model: <profile § Models; no rule, "opus">, prompt: …)`, without `name`.
 
-It runs the profile's suite and checks, reviews the integration commits and the seams between lanes, and runs the profile's visual or e2e QA on the touched areas (only when what the user sees changed). In parallel you check what is cheap: the profile's build with no new warning, the profile's lint, `git status` with no received fixture nor junk.
+It runs the profile's suite and checks, reviews the integration commits and the seams between lanes, and runs the profile's visual or e2e QA on the touched areas (only when what the user sees changed). In parallel you check what is cheap: the profile's build with no new warning (`profile_run.sh build <intwt>`), the profile's lint, `git status` with no received fixture nor junk.
 
 Findings: the same triage as phase 4, retest included; a bug across many areas becomes a FIX `impl-dev` lane (`LANES.md` §2–3). After the fixes, **one** retest (`Retest: <ids>`); what comes back goes to the report. API quota near its end: retest only the critical and high findings, and visual/e2e QA only on the areas of contract items.
 
