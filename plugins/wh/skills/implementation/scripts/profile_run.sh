@@ -10,8 +10,9 @@
 # Run: `bash -c <command>` in <worktree>, stdout and stderr to the log (--log, else a temporary file removed at
 # the end); then the last 30 lines of the log and, as the last line, `PROFILE_RUN <key>: exit <n>`; exits <n>.
 # `—`: prints `PROFILE_RUN <key>: skipped`, exit 0. --print: prints only the command (or `—`), exit 0.
-# Exit 2 with `PROFILE_RUN FAILED: <reason>`: bad call, unknown key, profile or section missing, key line missing
-# or malformed, `<port>`/`<slug>` left in the command.
+# Exit 2 with `PROFILE_RUN FAILED: <reason>`: bad call (including a --port that is not digits or a --slug that is
+# not kebab-case), unknown key, profile or section missing, key line missing or malformed, `<port>`/`<slug>` left
+# in the command.
 set -u
 
 fail() { echo "PROFILE_RUN FAILED: $*"; exit 2; }
@@ -38,6 +39,8 @@ while [ $# -gt 0 ]; do
 done
 [ -n "$wt" ] || wt=.
 [ -d "$wt" ] || fail "worktree $wt is not a folder"
+[ -z "$port" ] || [[ $port =~ ^[0-9]+$ ]] || fail "--port '$port' is not a number"
+[ -z "$slug" ] || [[ $slug =~ ^[a-z0-9-]+$ ]] || fail "--slug '$slug' is not kebab-case"
 
 profile=$wt/.claude/profile/implementation.md
 [ -f "$profile" ] || fail "profile $profile missing"
@@ -57,14 +60,16 @@ else
   fail "malformed '$key:' line (a command in backticks or —): $line"
 fi
 
+# bash 5.2 expands `&` in an unquoted replacement to the matched text: off here, and the replacement quoted.
+shopt -u patsub_replacement 2>/dev/null || true
 if [ "$cmd" != — ]; then
   if [[ $cmd == *'<port>'* ]]; then
     [ -n "$port" ] || fail "'$key' needs --port (the command has <port>)"
-    cmd=${cmd//<port>/$port}
+    cmd=${cmd//<port>/"$port"}
   fi
   if [[ $cmd == *'<slug>'* ]]; then
     [ -n "$slug" ] || fail "'$key' needs --slug (the command has <slug>)"
-    cmd=${cmd//<slug>/$slug}
+    cmd=${cmd//<slug>/"$slug"}
   fi
 fi
 

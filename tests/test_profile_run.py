@@ -69,6 +69,21 @@ class ProfileRunTest(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn('--slug', out)
 
+    def test_port_and_slug_are_validated(self):
+        for opt, value in (('--port', '51&01'), ('--port', 'abc'), ('--slug', 'de&mo'), ('--slug', 'Demo_X'),
+                           ('--slug', 'a b')):
+            with self.subTest(option=opt, value=value):
+                code, out = run(PROFILE_RUN, self.tmp, 'service', self.wt, '--print', '--port', '5101',
+                                '--slug', 'demo', opt, value)
+                self.assertEqual(code, 2, out)
+                self.assertTrue(out.startswith('PROFILE_RUN FAILED: %s' % opt), out)
+
+    def test_replacement_is_literal(self):
+        self.profile('## Commands\nservice: `a <port> & b <slug>-<port> && c`\n')
+        code, out = run(PROFILE_RUN, self.tmp, 'service', self.wt, '--print', '--port', '7', '--slug', 's-1')
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out, 'a 7 & b s-1-7 && c\n')
+
     def test_unknown_key_fails(self):
         code, out = run(PROFILE_RUN, self.tmp, 'deploy', self.wt)
         self.assertEqual(code, 2)
