@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Como o wh trabalha — Walter Dalla</title>
+<meta name="description" content="Passo a passo interativo do wh-harness: os agentes do plugin e os arquivos que cada um lê, escreve, executa ou apaga.">
+<link rel="canonical" href="https://walter-dalla.github.io/wh-harness/flow.html">
+<meta name="author" content="Walter Dalla Torre Neto">
+<meta name="theme-color" content="#0b0d10">
+<link rel="icon" href="https://walterdalla.uk/favicon.ico">
+<link rel="apple-touch-icon" href="https://walterdalla.uk/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<script>
+  // Tema antes do primeiro paint: ?theme= vence a chave wd-theme (a mesma do portfólio), que vence o sistema.
+  // ?embed=1: página dentro do iframe de walterdalla.uk, sem cabeçalho próprio nem padding externo.
+  try {
+    var q = new URLSearchParams(location.search)
+    if (q.get('embed') === '1') document.documentElement.classList.add('embed')
+    var t = q.get('theme')
+    if (t !== 'light' && t !== 'dark') t = localStorage.getItem('wd-theme')
+    if (t !== 'light' && t !== 'dark') t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
+    document.documentElement.dataset.theme = t
+    document.querySelector('meta[name="theme-color"]').content = t === 'light' ? '#f7f6f2' : '#0b0d10'
+  } catch (e) {}
+</script>
+<style>
+/* Tokens do portfólio (src/styles/global.css) + uma cor por ator do fluxo. */
+:root,:root[data-theme="dark"]{
+  --bg:#0b0d10; --surface:#121418; --surface2:#1c1f25; --border:#262a31; --strong:#383d46;
+  --text:#e6e8eb; --muted:#a9afb8; --faint:#8a919b; --accent:#f5a524; --btn-bg:#f5a524; --btn-fg:#0b0d10;
+  --c-owner:#a9afb8; --c-hook:#b28be6; --c-orch:#f5a524; --c-enrich:#45c1b8; --c-dev:#76a2f0; --c-qa:#ef7a8a; --c-script:#9cc165; --c-skill:#d29a63;
+  color-scheme:dark}
+:root[data-theme="light"]{
+  --bg:#f7f6f2; --surface:#ffffff; --surface2:#efede7; --border:#dedcd5; --strong:#c9c6bd;
+  --text:#15171a; --muted:#5b6169; --faint:#666c73; --accent:#9a5b0b; --btn-bg:#15171a; --btn-fg:#f7f6f2;
+  --c-owner:#5b6169; --c-hook:#7a4fb0; --c-orch:#9a5b0b; --c-enrich:#16807a; --c-dev:#2f62b8; --c-qa:#bf3d4f; --c-script:#5b7a2e; --c-skill:#8a5a2b;
+  color-scheme:light}
+:root{--sans:"IBM Plex Sans",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace; --gutter:clamp(16px,4vw,48px)}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text)}
+body{font-family:var(--sans);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+code{font-family:var(--mono)}
+
+/* Cabeçalho no estilo do site */
+.site-header{position:sticky;top:0;z-index:20;border-bottom:1px solid var(--border);background:color-mix(in srgb,var(--bg) 88%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.site-header__inner,.wrap{max-width:1380px;margin:0 auto;padding-inline:max(var(--gutter),env(safe-area-inset-left,0px))}
+.site-header__inner{padding-block:8px;display:flex;align-items:center;justify-content:space-between;gap:12px 24px}
+.brand{display:inline-flex;align-items:center;min-height:44px;font-family:var(--mono);font-size:14px;font-weight:500;color:var(--accent)}
+.tools{display:flex;align-items:center;gap:16px}
+.back{display:inline-flex;align-items:center;min-height:44px;font-family:var(--mono);font-size:13px;color:var(--muted)}
+.back:hover{color:var(--text)}
+.theme-toggle{width:44px;height:42px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--strong);border-radius:8px;background:transparent;color:var(--text);cursor:pointer}
+
+.wrap{display:flex;flex-direction:column;gap:20px;padding-block:clamp(32px,5vw,64px) 48px}
+header.intro{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px 24px}
+.eyebrow{font-family:var(--mono);font-size:13px;color:var(--accent);margin:0 0 12px}
+h1{margin:0;font-size:clamp(34px,4.6vw,56px);line-height:1.04;font-weight:600;letter-spacing:-.03em;text-wrap:balance}
+h1 code{font-weight:600;color:var(--accent)}
+.lede{color:var(--muted);max-width:680px;margin:14px 0 0;font-size:clamp(15px,1.4vw,18px);line-height:1.6}
+.rule{font-family:var(--mono);font-size:12.5px;border:1px solid var(--border);background:var(--surface);padding:12px 14px;border-radius:8px;max-width:440px;color:var(--muted)}
+.rule b{color:var(--accent)}
+.rule code{color:var(--text)}
+.tabs{display:flex;gap:4px 18px;flex-wrap:wrap;border-bottom:1px solid var(--border)}
+.tab{font-family:var(--mono);font-size:13px;background:none;border:0;color:var(--muted);padding:0;min-height:44px;cursor:pointer}
+.tab:hover{color:var(--text)}
+.tab[aria-selected="true"]{color:var(--text);font-weight:600;box-shadow:inset 0 -2px 0 var(--accent)}
+
+.grid{display:grid;grid-template-columns:250px minmax(0,1fr) 340px;gap:16px;align-items:start}
+@media (max-width:1100px){.grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.stage{grid-column:1/-1;order:-1}}
+@media (max-width:680px){.grid{grid-template-columns:minmax(0,1fr)}}
+.col h2{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin:0 0 10px;font-weight:500}
+
+/* atores */
+.actors{display:flex;flex-direction:column;gap:6px}
+.actor{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:10px 1fr;gap:10px;align-items:center;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);transition:opacity .25s,box-shadow .25s}
+.actor .dot{width:10px;height:10px;border-radius:50%;background:var(--c)}
+.actor .nm{font-family:var(--mono);font-size:13px;font-weight:600}
+.actor .rl{font-size:12.5px;color:var(--muted);line-height:1.3}
+.actor.idle{opacity:.45}
+.actor.on{box-shadow:inset 3px 0 0 var(--c),0 0 0 1px var(--c);opacity:1}
+.actor.sel{background:var(--surface2)}
+.actor:focus-visible,.stepdot:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.card{margin-top:10px;border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:14px;font-size:13.5px}
+.card h3{margin:0 0 4px;font-family:var(--mono);font-size:14px;color:var(--c)}
+.card dl{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;margin:10px 0 0}
+.card dt{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);padding-top:2px}
+.card dd{margin:0}
+.card code,.narr code,.msg code,.note code{font-size:.88em;background:var(--surface2);padding:1px 5px;border-radius:4px}
+
+/* palco */
+.stage{border:1px solid var(--border);background:var(--surface);border-radius:12px;padding:clamp(16px,2vw,24px);display:flex;flex-direction:column;gap:16px;min-width:0}
+.phase{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+.phase .pn{font-family:var(--mono);font-size:12px;color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:2px 8px}
+.phase h3{font-size:clamp(22px,2.2vw,28px);font-weight:600;letter-spacing:-.02em;margin:0;line-height:1.15;text-wrap:balance}
+.narr{margin:0;max-width:70ch;color:var(--muted);line-height:1.65}
+.msg{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-family:var(--mono);font-size:12.5px;border:1px dashed var(--strong);border-radius:8px;padding:12px 14px;background:var(--bg)}
+.msg .who{font-weight:600;color:var(--c)}
+.msg .arrow{color:var(--faint)}
+.msg .pl{flex-basis:100%;color:var(--text);white-space:pre-wrap;word-break:break-word}
+.msg.anim .pl{animation:type .5s ease-out}
+@keyframes type{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.note{font-size:13.5px;border-left:2px solid var(--accent);padding:4px 0 4px 12px;color:var(--muted);margin:0}
+.note b{color:var(--text)}
+.ctrl{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;min-height:44px;padding:0 18px;border-radius:8px;font-family:var(--sans);font-size:14px;font-weight:600;border:1px solid var(--strong);background:transparent;color:var(--text);cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--btn-bg);border-color:var(--btn-bg);color:var(--btn-fg)}
+.btn:disabled{opacity:.4;cursor:default}
+.count{font-family:var(--mono);font-size:12px;color:var(--faint);margin-left:auto;font-variant-numeric:tabular-nums}
+.steps{display:flex;gap:4px;flex-wrap:wrap}
+.stepdot{all:unset;cursor:pointer;height:6px;flex:1 1 18px;min-width:14px;border-radius:3px;background:var(--border)}
+.stepdot.done{background:color-mix(in srgb,var(--accent) 45%,var(--border))}
+.stepdot.cur{background:var(--accent)}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--faint)}
+.legend span{display:inline-flex;gap:5px;align-items:center}
+
+/* board */
+.board{font-family:var(--mono);font-size:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;overflow:auto;max-height:190px}
+.board .bh{position:sticky;top:0;background:var(--surface2);padding:6px 12px;color:var(--muted);display:flex;justify-content:space-between;gap:12px}
+.board ol{list-style:none;margin:0;padding:6px 12px}
+.board li{white-space:pre;color:var(--muted);font-variant-numeric:tabular-nums}
+.board li.new{color:var(--text);animation:type .4s}
+.board li .k{font-weight:600}
+.board .empty{color:var(--faint);padding:6px 0;font-style:italic;white-space:normal}
+
+/* arquivos */
+.tree{border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:8px 0;font-family:var(--mono);font-size:12.5px;overflow-x:auto}
+.grp{padding:10px 12px 4px;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.grp small{display:block;letter-spacing:0;text-transform:none;font-family:var(--sans);font-size:12px}
+.f{display:flex;align-items:center;gap:6px;padding:2px 12px;white-space:nowrap;transition:background .25s,opacity .25s;min-height:24px}
+.f .p{color:var(--faint)}
+.f .n{color:var(--text)}
+.f.idle{opacity:.5}
+.f.hit{opacity:1;background:var(--surface2)}
+.f.gone .n{text-decoration:line-through}
+.op{margin-left:auto;font-size:10.5px;font-weight:600;padding:1px 6px;border-radius:4px;color:var(--bg);background:var(--c);flex:none}
+.ops{margin-left:auto;display:flex;gap:4px}
+.ops .op{margin-left:0}
+footer{color:var(--faint);font-size:12.5px;border-top:1px solid var(--border);padding-top:16px}
+footer code{color:var(--muted)}
+
+/* mapa do fluxo */
+.flowmap{border:1px solid var(--border);background:var(--surface);border-radius:12px;padding:14px 14px 10px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.flowmap .mh{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:12.5px;color:var(--faint)}
+.flowmap .mh b{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:500;color:var(--muted)}
+.mapscroll{overflow-x:auto}
+.mapscroll svg{display:block;width:100%;min-width:640px;height:auto}
+.node{cursor:pointer;outline:none}
+.node rect{fill:var(--bg);stroke:var(--border);stroke-width:1.5;transition:fill .3s,stroke .3s}
+.node.done rect{stroke:color-mix(in srgb,var(--accent) 55%,var(--border))}
+.node.cur rect{fill:color-mix(in srgb,var(--accent) 14%,var(--surface));stroke:var(--accent);stroke-width:2.5}
+.node:hover rect,.node:focus-visible rect{stroke:var(--accent)}
+.node:focus-visible rect{stroke-width:3}
+.node .lb{font-family:var(--mono);font-size:10.5px;fill:var(--faint);letter-spacing:.06em}
+.node.cur .lb{fill:var(--accent)}
+.node .tt{font-family:var(--sans);font-size:14.5px;font-weight:600;fill:var(--text)}
+.node.idle .tt{fill:var(--muted)}
+.node .ad{stroke:var(--surface);stroke-width:1.5}
+.node.idle .ad{opacity:.45}
+.edge{fill:none;stroke:var(--strong);stroke-width:2;transition:stroke .3s}
+.edge.lit{stroke:color-mix(in srgb,var(--accent) 70%,var(--border))}
+.edge.cur{stroke:var(--accent);stroke-width:3;stroke-dasharray:8 6;animation:flow .8s linear infinite}
+.edge.loop{stroke-dasharray:4 4}
+.edge.loop.cur{stroke-dasharray:8 6}
+@keyframes flow{to{stroke-dashoffset:-14}}
+.mk{fill:var(--strong)} .mk.lit{fill:var(--accent)}
+.elabel{font-family:var(--mono);font-size:10.5px;fill:var(--faint)}
+.elabel.cur{fill:var(--accent);font-weight:600}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* modo embed: o portfólio já dá cabeçalho, tema e margens */
+.embed .site-header{display:none}
+.embed .wrap{padding:0;max-width:none}
+</style>
+</head>
+<body>
+<div class="site-header">
+  <div class="site-header__inner">
+    <a class="brand" href="https://walterdalla.uk/">~/walter-dalla</a>
+    <div class="tools">
+      <a class="back" href="https://walterdalla.uk/projects/wh-harness">← wh-harness</a>
+      <button class="theme-toggle" id="theme" type="button" aria-label="Alternar tema claro/escuro"></button>
+    </div>
+  </div>
+</div>
+
+<main class="wrap">
+  <header class="intro">
+    <div>
+      <p class="eyebrow">// wh-harness · fluxo interativo</p>
+      <h1>Como o <code>wh</code> trabalha</h1>
+      <p class="lede">Passo a passo dos agentes do plugin e dos arquivos que cada um lê, escreve, executa ou apaga. Escolha um fluxo, avance com os botões ou com ← →, e clique num ator para ver o que ele pode e não pode fazer.</p>
+    </div>
+    <div class="rule">A skill tem o <b>procedimento</b>, o profile tem os <b>fatos</b>. Nenhuma skill cita um comando do projeto: cita <code>profile § Seção</code>.</div>
+  </header>
+
+  <nav class="tabs" role="tablist" id="tabs"></nav>
+
+  <section class="flowmap" aria-label="Mapa do fluxo">
+    <div class="mh"><b>Mapa do fluxo</b><span>Seta acesa: caminho já percorrido · tracejada em movimento: passo atual · curva: laço de volta · clique num quadrado para ir até ele</span></div>
+    <div class="mapscroll" id="map"></div>
+  </section>
+
+  <div class="grid">
+    <section class="col">
+      <h2>Atores</h2>
+      <div class="actors" id="actors"></div>
+      <div class="card" id="card"></div>
+    </section>
+
+    <section class="stage" aria-live="polite">
+      <div class="steps" id="dots"></div>
+      <div class="phase"><span class="pn" id="pn"></span><h3 id="st"></h3></div>
+      <p class="narr" id="narr"></p>
+      <div class="msg" id="msg"></div>
+      <p class="note" id="note"></p>
+      <div class="ctrl">
+        <button class="btn" id="prev" type="button">← Anterior</button>
+        <button class="btn primary" id="next" type="button">Próximo →</button>
+        <button class="btn" id="play" type="button">▶ Reproduzir</button>
+        <span class="count" id="count"></span>
+      </div>
+      <div class="legend" id="legend"></div>
+      <div class="board">
+        <div class="bh"><span>.impl/export-csv/BOARD.md</span><span>append-only · board.sh</span></div>
+        <ol id="board"></ol>
+      </div>
+    </section>
+
+    <section class="col">
+      <h2>Arquivos</h2>
+      <div class="tree" id="tree"></div>
+    </section>
+  </div>
+  <footer>Exemplo: tarefa <code>export-csv</code> com duas lanes (<code>api</code>, <code>ui</code>). Fonte: <code>docs/MANUAL.md</code>, <code>plugins/wh/skills/implementation/SKILL.md</code>, <code>LANES.md</code> e <code>plugins/wh/agents/*.md</code> do <a href="https://github.com/Walter-Dalla/wh-harness" target="_blank" rel="noreferrer" style="color:var(--accent)">wh-harness ↗</a>.</footer>
+</main>
+
+<script>
+/* Tema: mesma chave do portfólio, para a escolha valer nos dois. */
+(function(){
+  const root=document.documentElement, btn=document.getElementById("theme");
+  const icon=t=>t==="dark"
+    ?'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>'
+    :'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+  const apply=t=>{
+    root.dataset.theme=t; btn.innerHTML=icon(t);
+    document.querySelector('meta[name="theme-color"]').content=t==="light"?"#f7f6f2":"#0b0d10";
+  };
+  btn.innerHTML=icon(root.dataset.theme);
+  btn.onclick=()=>{
+    const t=root.dataset.theme==="dark"?"light":"dark";
+    apply(t);
+    try{localStorage.setItem("wd-theme",t)}catch(e){}
+  };
+
+  /* Protocolo do iframe (src/components/ProjectEmbed.jsx no portfólio): recebe o tema, devolve a altura. */
+  const PARENTS=["https://walterdalla.uk","http://localhost:3000"];
+  window.addEventListener("message",e=>{
+    if(!PARENTS.includes(e.origin)) return;
+    const d=e.data;
+    if(d&&d.type==="wh-flow:theme"&&(d.theme==="dark"||d.theme==="light")) apply(d.theme);
+  });
+  if(root.classList.contains("embed")&&window.parent!==window&&"ResizeObserver" in window){
+    let last=0;
+    new ResizeObserver(()=>{
+      const h=Math.ceil(document.body.getBoundingClientRect().height);
+      if(h===last) return; last=h;
+      // postMessage com a origem errada é descartado em silêncio: mandar às duas entrega só ao pai real.
+      PARENTS.forEach(o=>window.parent.postMessage({type:"wh-flow:height",height:h},o));
+    }).observe(document.body);
+  }
+})();
+
+const ACTORS = {
+  owner:{n:"Dono",r:"Você: pede, responde, faz merge do PR",c:"--c-owner",
+    d:{Onde:"Terminal do Claude Code",Faz:"Envia o pedido, responde às perguntas da fase 2 (AskUserQuestion) e faz o merge do PR.",Nunca:"É consultado fora da fase 2, salvo um <code>OWNER:</code> que trava uma lane."}},
+  hook:{n:"prompt-graph",r:"Hook UserPromptSubmit, Python",c:"--c-hook",
+    d:{Modelo:"Nenhum: determinístico, sem LLM nem rede",Onde:"<code>hooks.json</code> → <code>prompt_graph.py</code>, timeout 5 s",Faz:"Casa o prompt com glossário, features e CodeGraph e injeta ponteiros (≤ <code>max_chars</code>).",Nunca:"Bloqueia o prompt; vê o prompt de subagentes ou de skills chamadas por skills."}},
+  orch:{n:"Orquestrador",r:"Sua sessão rodando a skill",c:"--c-orch",
+    d:{Modelo:"O da sessão (paga 72–77% da conta)",Onde:"No clone, sempre em <code>main</code>",Faz:"Prepara o ambiente, despacha agentes, faz ponte com o dono, merge das lanes no worktree de integração, relatório e PR.",Limite:"No máximo 3 subagentes ao mesmo tempo.",Nunca:"Faz <code>git switch</code>, merge ou commit no checkout do clone."}},
+  enrich:{n:"impl-enrich",r:"Arquiteto: análise e plano",c:"--c-enrich",
+    d:{Modelo:"<code>fable</code>, effort medium (frontmatter)",Onde:"No clone, sem worktree",Faz:"Escreve ANALYSIS.md, PLAN.md e os arquivos de lane; fica vivo até o PR respondendo consultas por SendMessage.",Escreve:"Só em <code>.impl/&lt;slug&gt;/</code>",Nunca:"Edita código, faz commit ou fala direto com o dono."}},
+  dev:{n:"impl-dev",r:"Uma lane, um commit por item",c:"--c-dev",
+    d:{Modelo:"profile § Models (padrão <code>opus</code>)",Onde:"Worktree próprio, branch <code>impl/&lt;slug&gt;-&lt;lane&gt;</code>",Faz:"Preflight, edita só os arquivos de <code>Owns:</code>, roda a Acceptance, commit + push por item, checkpoint, board e retro.",Nunca:"Faz merge; toca arquivos protegidos (changelog, docs de feature, CLAUDE.md)."}},
+  qa:{n:"impl-qa",r:"Acha e documenta, nunca corrige",c:"--c-qa",
+    d:{"Modo code":"<code>sonnet</code>, no clone, estático: 4 portões (decisão, padrões, nomes, riscos)","Modo final":"<code>opus</code>, worktree próprio: suíte, checks, integração, QA visual/e2e",Escreve:"<code>qa/&lt;lane|final&gt;.md</code> e sua retro",Nunca:"Corrige código; roda <code>/code-review</code>."}},
+  script:{n:"Scripts",r:"Passos determinísticos em bash/python",c:"--c-script",
+    d:{Quais:"<code>impl_env.sh</code>, <code>board.sh</code>, <code>acceptance.py</code>, <code>preflight.sh</code>, <code>scope.sh</code>, <code>merge_lane.sh</code>, <code>cleanup_worktrees.sh</code>, <code>check.py</code>",Por_que:"Tudo que é git, sistema de arquivos ou parsing sai do modelo: mais barato e repetível.",Testes:"<code>tests/</code> contra <code>examples/demo</code>; shellcheck no CI."}},
+  skill:{n:"Skills auxiliares",r:"wh:profile, wh:retro, wh:qa-visual…",c:"--c-skill",
+    d:{Quais:"<code>wh:profile</code>, <code>wh:retro</code>, <code>wh:qa-visual</code>, <code>wh:cleanup</code>, <code>wh:feature-docs</code>",Como:"Chamadas por <code>Skill(...)</code> do orquestrador ou de um subagente.",Perfil:"Cada uma injeta <code>_common.md</code> + o seu <code>&lt;skill&gt;.md</code> no topo."}}
+};
+
+const GROUPS = [
+  {t:"Plugin wh",s:"genérico, instalado por usuário",files:[
+    ["hooks","plugins/wh/hooks/","hooks.json"],
+    ["pg","plugins/wh/scripts/","prompt_graph.py"],
+    ["skill","skills/implementation/","SKILL.md"],
+    ["aux","skills/implementation/","LANES · TRIAGE · ENVIRONMENT · REPORT.md"],
+    ["scripts","skills/implementation/scripts/","*.sh · acceptance.py"],
+    ["agents","plugins/wh/agents/","impl-enrich · impl-dev · impl-qa.md"],
+    ["ptpl","skills/","profile/COMMON.md · */PROFILE.md"],
+    ["check","skills/adopt/scripts/","check.py"],
+    ["atpl","skills/adopt/templates/agents/","Explore.md · Plan.md"]]},
+  {t:"Repositório do projeto",s:"versionado",files:[
+    ["claudemd","","CLAUDE.md"],
+    ["common",".claude/profile/","_common.md"],
+    ["pimpl",".claude/profile/","implementation.md"],
+    ["ctx",".claude/profile/","context.json"],
+    ["settings",".claude/","settings.json"],
+    ["pagents",".claude/agents/","Explore.md · Plan.md"],
+    ["gloss","docs/","GLOSSARY.md"],
+    ["feat","docs/features/","README.md · *.md"],
+    ["src","src/","código"],
+    ["report","docs/reports/","export-csv.md"]]},
+  {t:".impl/export-csv/",s:"trilha da tarefa, fora do git",files:[
+    ["analysis","","ANALYSIS.md"],
+    ["plan","","PLAN.md"],
+    ["lanes","","api.md · ui.md"],
+    ["board","","BOARD.md"],
+    ["accept","acceptance/","&lt;lane&gt;-&lt;id&gt;.log"],
+    ["progress","progress/","checkpoint por lane"],
+    ["qadir","qa/","api.diff · api.md · final.md · visual/"],
+    ["retros","retros/","*.md"]]},
+  {t:"Worktrees",s:".claude/worktrees/",files:[
+    ["intwt","impl-export-csv/","branch impl/export-csv"],
+    ["wtapi","worktree-agent-…/","impl/export-csv-api"],
+    ["wtui","worktree-agent-…/","impl/export-csv-ui"],
+    ["wtqa","worktree-agent-…/","QA final"]]},
+  {t:"Fora do repo",s:"",files:[
+    ["cg",".codegraph/","codegraph.db"],
+    ["cache","~/.cache/walter-harness/","&lt;hash&gt;.json"],
+    ["remote","GitHub","remote · PR"]]}
+];
+
+const OPS={r:"lê",w:"escreve",x:"executa",d:"apaga",c:"cria"};
+
+/* step: actors, msg [from,to,text], files {id:[op,actor]|[[op,actor],...]}, board [[lane,KIND,text]] */
+const FLOWS = {
+impl:{label:"/wh:implementation",steps:[
+ {pn:"pré",t:"O hook lê o pedido antes do modelo",a:["owner","hook"],
+  n:"Você digita o pedido. O hook <code>prompt-graph</code> sobe a árvore procurando <code>context.json</code>; achando, casa o texto com glossário, mapa de features e CodeGraph, e devolve ponteiros que entram no contexto junto com o prompt.",
+  m:["owner","orch","/wh:implementation exportar pedidos em CSV na tela de relatórios"],
+  note:"Sem <b>context.json</b> o Python nem é chamado. O hook enriquece só a sessão principal; subagentes recebem o bloco <code>[wh:prompt-graph]</code> copiado no prompt.",
+  f:{hooks:["x","hook"],pg:["x","hook"],ctx:["r","hook"],gloss:["r","hook"],feat:["r","hook"],cg:["r","hook"],cache:["r","hook"]}},
+ {pn:"1",t:"A skill carrega com o profile injetado",a:["orch","skill"],
+  n:"Antes de o modelo ler a skill, o Claude Code roda <code>cat .claude/profile/_common.md implementation.md</code> e cola o resultado no texto. Se faltar, aparece <code>PROFILE_MISSING</code> e o orquestrador chama <code>wh:profile</code>, que escreve uma linha por fato com a fonte entre colchetes.",
+  m:["orch","skill",'Skill(wh:profile, "implementation defer")   ← só se PROFILE_MISSING'],
+  note:"As linhas <b>[inferred]</b> não viram pergunta agora: com <code>defer</code> elas entram no AskUserQuestion da fase 2.",
+  f:{skill:["r","orch"],common:["r","orch"],pimpl:["r","orch"],claudemd:["r","skill"],ptpl:["r","skill"]}},
+ {pn:"1",t:"Um script monta o ambiente",a:["orch","script"],
+  n:"Um único comando, <code>impl_env.sh export-csv --main main --remote origin</code>, confere root, branch, <code>git status</code> limpo e o remote; cria a pasta da tarefa e o worktree de integração; decide o modo de PR.",
+  m:["script","orch","ENV OK\nROOT=/repo  MAIN=main  GIT=/usr/bin/git  PR_MODE=github\nIMPL=/repo/.impl/export-csv  BOARD=…/BOARD.md  INTWT=/repo/.claude/worktrees/impl-export-csv"],
+  note:"Os valores <b>KEY=VALUE</b> são copiados para os prompts dos agentes, nunca redigitados. O checkout do clone fica em <code>main</code> a tarefa inteira.",
+  f:{scripts:["x","script"],board:["c","script"],accept:["c","script"],progress:["c","script"],qadir:["c","script"],retros:["c","script"],intwt:["c","script"],cg:["w","script"],remote:["r","script"]}},
+ {pn:"2",t:"O enricher analisa",a:["orch","enrich"],
+  n:"O orquestrador despacha <code>impl-enrich</code> sem worktree. Ele lê o profile, as docs de § Enricher reading e segue o pedido pelas camadas do código. Cada afirmação leva a fonte: <code>[code arquivo:linha]</code>, <code>[doc]</code>, <code>[inferred]</code> ou <code>[undetermined]</code>.",
+  m:["orch","enrich","Stage: analyze. Repo: /repo. Slug: export-csv.\nRequest: exportar pedidos em CSV…  prompt-graph context: [wh:prompt-graph] …"],
+  note:"O orquestrador <b>guarda o id</b> do agente: todas as etapas seguintes o retomam por SendMessage, com a análise na memória.",
+  f:{agents:["r","enrich"],common:["r","enrich"],pimpl:["r","enrich"],claudemd:["r","enrich"],gloss:["r","enrich"],feat:["r","enrich"],src:["r","enrich"],cg:["r","enrich"],analysis:["w","enrich"]}},
+ {pn:"2",t:"Perguntas ao dono, depois o plano",a:["owner","orch","enrich"],
+  n:"O enricher devolve <code>QUESTIONS</code>. O orquestrador pergunta a você num AskUserQuestion e repassa as respostas. Com elas, o enricher escreve o plano: itens com id, arquivo, símbolo, tipo (internal ou contract) e Acceptance executável, divididos em lanes e ondas.",
+  m:["orch","enrich","Stage: plan. Answers: separador = ';' · incluir pedidos cancelados = não"],
+  note:"Sem dono (modo headless <code>-p</code>), adota a opção recomendada de cada pergunta e marca <b>(no owner)</b> nas Decisions do plano e no relatório.",
+  f:{analysis:["r","orch"],plan:["w","enrich"],lanes:["w","enrich"],aux:["r","enrich"]}},
+ {pn:"3",t:"Lanes despachadas em worktrees",a:["orch","dev","script"],
+  n:"Tarefa grande: um <code>impl-dev</code> por lane, cada um em seu worktree. O primeiro passo é <code>preflight.sh</code> (base, branch, porta livre, arquivo de lane). Depois renomeia a branch, reseta na base e marca START no board.",
+  m:["orch","dev","Lane: /repo/.impl/export-csv/api.md · Base: a1b2c3d · Port: 5101\nBoard: …/BOARD.md · Commands: git = /usr/bin/git -C <worktree> …"],
+  note:"Tarefa pequena não abre lanes: o próprio orquestrador implementa item a item no worktree de integração.",
+  f:{lanes:["r","dev"],agents:["r","dev"],scripts:["x","dev"],wtapi:["c","dev"],wtui:["c","dev"],board:["w","script"],common:["r","dev"]},
+  b:[["api","START","a1b2c3d"],["ui","START","a1b2c3d"]]},
+ {pn:"3",t:"Item a item: edita, prova, commita",a:["dev","script"],
+  n:"Cada item edita só os arquivos de <code>Owns:</code>. <code>acceptance.py</code> roda a Acceptance do item no worktree e grava o log. Item verde = um commit com o id na mensagem, push da branch da lane, checkpoint reescrito.",
+  m:["dev","script","acceptance.py api.md <worktree> --only export-csv-1 --log …/acceptance --lane api\nexit 0"],
+  note:"Item de <b>contract</b> escreve uma linha CONTRACT no board para a lane consumidora. Arquivos fora do worktree são gravados por Bash: o guard de isolamento recusa Write/Edit ali.",
+  f:{wtapi:["w","dev"],wtui:["w","dev"],src:["w","dev"],accept:["w","script"],progress:["w","dev"],remote:["w","dev"],board:["w","script"]},
+  b:[["api","CONTRACT","to=ui: GET /reports/orders.csv: text/csv; 400 se intervalo > 90 dias"]]},
+ {pn:"3",t:"Dúvida? Consulta o enricher",a:["dev","orch","enrich"],
+  n:"Quando a regra não está clara, o dev manda <code>QUESTION</code> para o orquestrador e segue com outro item. O orquestrador responde sozinho se o plano já responde; senão repassa ao enricher, que devolve a resposta com o <b>impacto</b>.",
+  m:["dev","orch","QUESTION ui export-csv-4: o botão some quando não há pedidos? Context: OrdersPage.tsx:88. Proposal: desabilitar com tooltip."],
+  note:"Impacto <b>other lanes</b> ou <b>contract</b> → as lanes citadas são avisadas. <b>replan</b> → nenhuma lane nova é despachada até o plano ser atualizado.",
+  f:{plan:["r","enrich"],analysis:["r","enrich"],lanes:["w","enrich"]}},
+ {pn:"3",t:"Fim de lane",a:["dev","script","skill"],
+  n:"Suíte completa, typecheck e o check da camada, uma vez. <code>scope.sh</code> confirma que nada saiu de <code>Owns:</code>. O dev grava END com o estado (DONE, PARTIAL, HUMAN_DECISION, BLOCKED, FAILED) e escreve a retro com <code>wh:retro</code>.",
+  m:["dev","orch","END · DONE · 3 items · 9f8e7d6"],
+  f:{scripts:["x","dev"],board:["w","script"],retros:["w","skill"],progress:["w","dev"]},
+  b:[["api","END","DONE · 3 items · 9f8e7d6"]]},
+ {pn:"4",t:"QA de código, estático",a:["orch","qa"],
+  n:"Assim que a lane entrega, o orquestrador grava o diff e despacha <code>impl-qa</code> modo code, sem worktree e sem rodar nada. Ele lê a intenção primeiro (lane e Decisions) e aplica quatro portões: decisão, padrões do repo, nomes do glossário, riscos.",
+  m:["orch","qa","Mode: code. Lane: …/api.md · Branch: impl/export-csv-api @ 9f8e7d6\nDiff: …/qa/api.diff · Output: …/qa/api.md"],
+  note:"A prova de execução é o <b>log da Acceptance</b>; o QA de código não roda testes. Roda enquanto as outras lanes da onda ainda trabalham.",
+  f:{qadir:[["w","orch"],["w","qa"]],lanes:["r","qa"],plan:["r","qa"],accept:["r","qa"],gloss:["r","qa"],claudemd:["r","qa"],retros:["w","qa"]}},
+ {pn:"4",t:"Correções e merge da lane",a:["orch","dev","script"],
+  n:"Achados de bug, padrão, nome ou teste faltando voltam ao <b>mesmo</b> impl-dev, que faz um commit por achado (<code>QA-api-01: …</code>). Depois <code>merge_lane.sh</code> faz o merge no worktree de integração, e recusa qualquer outro lugar.",
+  m:["script","orch","MERGED: api -> 4c5d6e7"],
+  note:"Conflito: o orquestrador resolve mantendo a intenção das duas lanes. <b>MAIN MOVED</b> avisa que outro PR entrou na main; o merge dela espera a fase 5.",
+  f:{wtapi:["w","dev"],remote:[["w","dev"],["r","script"]],scripts:["x","orch"],intwt:["w","script"],board:["w","script"]},
+  b:[["orchestrator","MERGE","api → 4c5d6e7"],["ui","END","DONE · 2 items · 1a2b3c4"],["orchestrator","MERGE","ui → 7e8f9a0"]]},
+ {pn:"5",t:"QA final, uma vez, na ponta",a:["orch","qa","skill"],
+  n:"<code>impl-qa</code> modo final, num worktree próprio: suíte e checks do profile, commits de integração e costuras entre lanes, e QA visual com <code>wh:qa-visual</code> nas áreas tocadas. Em paralelo o orquestrador confere build sem warning novo e lint.",
+  m:["orch","qa","Mode: final. Branch: impl/export-csv @ 7e8f9a0 · Touched areas: Relatórios\nVerify: — · Gates: no"],
+  note:"Os screenshots nascem no worktree do QA, que some com ele: são copiados para <b>qa/visual/</b> antes.",
+  f:{wtqa:["c","qa"],intwt:["r","qa"],scripts:["x","qa"],src:["r","qa"],qadir:["w","qa"],retros:["w","qa"],pimpl:["r","qa"]}},
+ {pn:"6",t:"Retros, relatório e docs",a:["orch","enrich","skill"],
+  n:"O enricher escreve sua retro; o orquestrador escreve a dele com <code>wh:retro</code>, junta tudo no relatório e atualiza as docs de fechamento (changelog, mapa de features, glossário). Uma melhoria que é uma linha do profile entra no mesmo commit.",
+  m:["orch","enrich","Stage: retro. File: /repo/.impl/export-csv/retros/enricher.md"],
+  f:{retros:[["w","enrich"],["r","orch"]],report:["w","orch"],feat:["w","orch"],gloss:["w","orch"],pimpl:["w","orch"],intwt:["w","orch"]}},
+ {pn:"6",t:"Limpeza e PR",a:["orch","skill","script","owner"],
+  n:"<code>wh:cleanup</code> apaga a pasta da tarefa (já consolidada no relatório) e <code>cleanup_worktrees.sh</code> remove os worktrees da execução. Push de <code>impl/export-csv</code>, <code>gh pr create</code>, e você recebe o link em até 10 linhas.",
+  m:["orch","owner","PR #42 aberto · itens fechados: 5 · abertos: 1 (decisão sua)\nRelatório: docs/reports/export-csv.md\n/code-review ultra 42"],
+  note:"O merge do PR é seu. Sem GitHub (<b>PR_MODE=none</b>) a resposta traz a branch e o comando de merge.",
+  f:{analysis:["d","skill"],plan:["d","skill"],lanes:["d","skill"],board:["d","skill"],accept:["d","skill"],progress:["d","skill"],qadir:["d","skill"],retros:["d","skill"],wtapi:["d","script"],wtui:["d","script"],wtqa:["d","script"],intwt:["d","script"],remote:["w","orch"]}}
+]},
+adopt:{label:"/wh:adopt",steps:[
+ {pn:"1",t:"Diagnóstico determinístico",a:["owner","orch","script"],
+  n:"Na raiz de um repo sem o harness, <code>/wh:adopt</code> roda <code>check.py --root .</code>: uma linha <code>OK</code>, <code>MISSING</code> ou <code>WARN</code> por peça. <code>/wh:adopt check</code> para aqui.",
+  m:["script","orch","OK      CLAUDE.md\nMISSING .claude/profile/_common.md\nMISSING .claude/profile/context.json\nMISSING .claude/agents/Explore.md"],
+  f:{check:["x","script"],claudemd:["r","script"],common:["r","script"],ctx:["r","script"],pagents:["r","script"],settings:["r","script"]}},
+ {pn:"2",t:"Profiles a partir do repo",a:["orch","skill","owner"],
+  n:"<code>wh:profile</code> compara cada template com o que existe e procura cada seção faltante nas fontes, nesta ordem: CLAUDE.md e as docs que ele aponta, profiles já escritos, skill antiga, workflows do CI, scripts de build, README.",
+  m:["skill","owner","[inferred] § Tests: npm test --workspaces — confirma?"],
+  note:"Seção sem resposta fica <b>—</b> e a skill que depende dela pula a fase, dizendo por quê. Alvo: <code>_common.md</code> ≤ 40 linhas, <code>&lt;skill&gt;.md</code> ≤ 60.",
+  f:{ptpl:["r","skill"],claudemd:["r","skill"],common:["w","skill"],pimpl:["w","skill"]}},
+ {pn:"3",t:"Glossário e mapa de features",a:["orch","skill"],
+  n:"Se o repo tem domínio, a adoção semeia <code>docs/GLOSSARY.md</code> e <code>docs/features/</code>. São eles que alimentam o hook. Engordar o mapa depois é com <code>/wh:feature-docs</code>.",
+  m:["skill","orch","docs/features/README.md: | [orders.md](orders.md) | Pedidos | pedido, order, `OrderService` |"],
+  f:{gloss:["w","skill"],feat:["w","skill"],src:["r","skill"]}},
+ {pn:"4",t:"Liga o hook e declara o plugin",a:["orch"],
+  n:"Escreve <code>context.json</code> (onde estão glossário, features e CodeGraph), <code>settings.json</code> (quem clonar recebe a oferta do plugin) e <code>.gitignore</code>.",
+  m:["orch","orch",'{ "glossario": "docs/GLOSSARY.md", "features": "docs/features", "codegraph": ".codegraph/codegraph.db", "idioma": "en" }'],
+  note:"<b>codegraph init</b> não entra: indexar é decisão do dono.",
+  f:{ctx:["w","orch"],settings:["w","orch"]}},
+ {pn:"5",t:"Agentes Explore e Plan do projeto",a:["orch"],
+  n:"Copia os templates para <code>.claude/agents/</code>. Um agente de projeto com o nome de um nativo vence o nativo, então Explore (haiku) e Plan (fable) passam a seguir as regras do repo: CodeGraph, glossário e marcas de certeza.",
+  m:["orch","orch","<!-- wh-template: explore 1 -->  ← marcador que check.py compara (MISSING, OUTDATED, WARN)"],
+  note:"Um arquivo do dono sem marcador recebe <b>WARN</b> e nunca é sobrescrito. Os agentes só valem na próxima sessão.",
+  f:{atpl:["r","orch"],pagents:["w","orch"]}},
+ {pn:"6",t:"Valida e entrega",a:["orch","script","owner"],
+  n:"<code>prompt_graph.py --build</code> mostra o tamanho do grafo e um <code>--query</code> simula um prompt. O commit fica com você; depois, abra uma sessão nova para hooks, plugin e agentes carregarem.",
+  m:["script","orch","graph: 214 keys, 9 features, 48 terms, 61 symbols"],
+  f:{pg:["x","script"],ctx:["r","script"],gloss:["r","script"],feat:["r","script"],cg:["r","script"],cache:["w","script"]}}
+]},
+hook:{label:"hook prompt-graph",steps:[
+ {pn:"1",t:"Disparo e porta de saída",a:["owner","hook"],
+  n:"Em todo prompt, o <code>hooks.json</code> sobe a árvore a partir do cwd procurando <code>.claude/profile/context.json</code>. Sem ele, o Python nem é chamado.",
+  m:["owner","hook","o pedido cancelado não aparece no relatório"],
+  note:"Também fica calado com prompt menor que <b>min_prompt</b>, com <code>WH_PROMPT_GRAPH=0</code> ou em qualquer exceção (erro vai para stderr).",
+  f:{hooks:["x","hook"],ctx:["r","hook"]}},
+ {pn:"2",t:"Grafo em cache",a:["hook"],
+  n:"A assinatura do cache é um SHA-1 da versão, do mtime do script e do mtime e tamanho de cada fonte. Mudou algo, o grafo é reconstruído (~0,18 s em 29 features); senão a consulta leva ~30 ms.",
+  m:["hook","hook","nós: termos (linhas do glossário) · features (docs/features/*.md) · símbolos (Entry symbols → arquivo:linha)"],
+  note:"A escrita do cache é atômica (<b>.tmp</b> + <code>os.replace</code>), segura com várias sessões ao mesmo tempo.",
+  f:{pg:["x","hook"],gloss:["r","hook"],feat:["r","hook"],cg:["r","hook"],cache:[["r","hook"],["w","hook"]]}},
+ {pn:"3",t:"Casamento e pontuação",a:["hook"],
+  n:"Normaliza prompt e chaves do mesmo jeito (sem acento, minúsculo, radical de plural), casa n-gramas do maior (5 tokens) para o menor e soma <code>peso / nº de features</code> por chave casada.",
+  m:["hook","hook","\"pedido\" → termo Pedido (Order) · \"relatório\" → feature reports.md (peso 3) · \"cancelado\" → OrderStatus.Cancelled"],
+  f:{cache:["r","hook"]}},
+ {pn:"4",t:"Só ponteiros entram no contexto",a:["hook","orch"],
+  n:"A saída vai como <code>additionalContext</code>, com teto de <code>max_chars</code>. O modelo decide o que abrir. Prompt sem termo do domínio não injeta nada.",
+  m:["hook","orch","[wh:prompt-graph] Deterministic context; pointers only, check before asserting.\nTerms: Order = `Order` · Canceled order = `OrderStatus.Cancelled`\nRead: docs/features/reports.md (Reports)\nSymbols: ReportService src/Services/ReportService.cs:31"],
+  note:"Casamento é <b>lexical</b>: uma paráfrase sem nenhuma palavra do glossário ou do índice não casa nada.",
+  f:{}}
+]}
+};
+
+/* layout do mapa: títulos curtos, posição [coluna,linha], laços [de,para,rótulo] */
+Object.assign(FLOWS.impl,{
+  short:["Hook injeta\ncontexto","Profile\ninjetado","impl_env.sh","Análise","Perguntas\ne plano","Lanes em\nworktrees","Item: edita,\nprova, commita","Consulta ao\nenricher","Fim de lane","QA de código","Correções\ne merge","QA final","Retros e\nrelatório","Limpeza e PR"],
+  pos:[[0,0],[1,0],[2,0],[3,0],[4,0],[4,1],[3,1],[2,1],[1,1],[0,1],[0,2],[1,2],[2,2],[3,2]],
+  loops:[[7,6,"resposta + impacto"],[10,9,"reteste"]]});
+Object.assign(FLOWS.adopt,{
+  short:["check.py","Profiles","Glossário e\nfeatures","context.json\nsettings.json","Explore e Plan","Valida"],
+  pos:[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],loops:[]});
+Object.assign(FLOWS.hook,{
+  short:["Disparo","Grafo em cache","Casamento e\npontuação","Ponteiros no\ncontexto"],
+  pos:[[0,0],[1,0],[2,0],[3,0]],loops:[]});
+
+const $=s=>document.querySelector(s);
+
+function stepLabel(s){return s.pn==="pré"?"ANTES DA FASE 1":(flow==="impl"?"FASE "+s.pn:"PASSO "+s.pn)}
+function renderMap(){
+  const F=FLOWS[flow], st=F.steps, W=180,H=74,gx=46,gy=56,pad=24;
+  const cols=Math.max(...F.pos.map(p=>p[0]))+1, rows=Math.max(...F.pos.map(p=>p[1]))+1;
+  const vw=pad*2+cols*W+(cols-1)*gx, vh=pad*2+rows*H+(rows-1)*gy;
+  const B=F.pos.map(([c,r])=>({x:pad+c*(W+gx),y:pad+r*(H+gy)}));
+  const cx=b=>b.x+W/2, cy=b=>b.y+H/2;
+  let edges="",labels="";
+  const fwd=(A,C)=>{
+    if(A.y===C.y) return C.x>A.x?`M${A.x+W},${cy(A)} L${C.x-2},${cy(C)}`:`M${A.x},${cy(A)} L${C.x+W+2},${cy(C)}`;
+    if(A.x===C.x) return `M${cx(A)},${A.y+H} L${cx(C)},${C.y-2}`;
+    const my=(A.y+H+C.y)/2; return `M${cx(A)},${A.y+H} L${cx(A)},${my} L${cx(C)},${my} L${cx(C)},${C.y-2}`;
+  };
+  for(let j=1;j<st.length;j++){
+    const cls=j<i?"lit":j===i?"cur":"";
+    edges+=`<path class="edge ${cls}" d="${fwd(B[j-1],B[j])}" marker-end="url(#mk${cls?"-lit":""})"/>`;
+  }
+  (F.loops||[]).forEach(([a,b,lab])=>{
+    const A=B[a],C=B[b],cur=a===i, cls=`edge loop ${cur?"cur":""}`;
+    let d,lx,ly,anchor="middle";
+    if(A.y===C.y){
+      const dir=C.x>A.x?1:-1, x1=cx(A)+dir*W*0.28, x2=cx(C)-dir*W*0.28;
+      d=`M${x1},${A.y} C${x1},${A.y-38} ${x2},${C.y-38} ${x2},${C.y-2}`; lx=(x1+x2)/2; ly=A.y-32;
+    } else {
+      const x=A.x+24; d=`M${x},${A.y} L${x},${C.y+H+2}`; lx=x+6; ly=(A.y+C.y+H)/2+4; anchor="start";
+    }
+    edges+=`<path class="${cls}" d="${d}" marker-end="url(#mk${cur?"-lit":""})"/>`;
+    labels+=`<text class="elabel ${cur?"cur":""}" x="${lx}" y="${ly}" text-anchor="${anchor}">${esc(lab)}</text>`;
+  });
+  const nodes=st.map((s,j)=>{
+    const b=B[j], state=j<i?"done":j===i?"cur":"idle";
+    const lines=F.short[j].split("\n");
+    const tt=lines.map((l,k)=>`<tspan x="${b.x+12}" y="${b.y+(lines.length===1?46:39)+k*17}">${esc(l)}</tspan>`).join("");
+    const dots=s.a.map((a,k)=>`<circle class="ad" cx="${b.x+W-12-k*11}" cy="${b.y+14}" r="4.5" style="fill:${col(a)}"><title>${ACTORS[a].n}</title></circle>`).join("");
+    return `<g class="node ${state}" data-j="${j}" tabindex="0" role="button" aria-label="Ir para: ${esc(s.t)}"><title>${esc(s.t)}</title><rect x="${b.x}" y="${b.y}" width="${W}" height="${H}" rx="8"/><text class="lb" x="${b.x+12}" y="${b.y+18}">${stepLabel(s)}</text><text class="tt">${tt}</text>${dots}</g>`;
+  }).join("");
+  $("#map").innerHTML=`<svg viewBox="0 0 ${vw} ${vh}" role="img" aria-label="Mapa do fluxo ${esc(F.label)}"><defs>
+    <marker id="mk" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path class="mk" d="M0,0 L10,5 L0,10 z"/></marker>
+    <marker id="mk-lit" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto"><path class="mk lit" d="M0,0 L10,5 L0,10 z"/></marker>
+  </defs>${edges}${labels}${nodes}</svg>`;
+  $("#map").querySelectorAll(".node").forEach(g=>{
+    const jump=()=>{stop();i=+g.dataset.j;render()};
+    g.onclick=jump; g.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();jump()}};
+  });
+}
+let flow="impl", i=0, sel="orch", timer=null;
+
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+function col(a){return `var(${ACTORS[a].c})`}
+
+function buildTabs(){
+  $("#tabs").innerHTML=Object.entries(FLOWS).map(([k,v])=>`<button class="tab" role="tab" id="tab-${k}" data-k="${k}" aria-selected="${k===flow}">${v.label}</button>`).join("");
+  $("#tabs").querySelectorAll(".tab").forEach(b=>b.onclick=()=>{flow=b.dataset.k;i=0;stop();buildTabs();render();try{localStorage.setItem("wh-flow",flow)}catch(e){}});
+}
+function buildActors(){
+  $("#actors").innerHTML=Object.entries(ACTORS).map(([k,a])=>`<button class="actor" id="actor-${k}" data-k="${k}" style="--c:${col(k)}"><span class="dot"></span><span><span class="nm">${a.n}</span><br><span class="rl">${a.r}</span></span></button>`).join("");
+  $("#actors").querySelectorAll(".actor").forEach(b=>b.onclick=()=>{sel=b.dataset.k;renderCard();markActors()});
+  $("#legend").innerHTML=Object.entries(OPS).map(([k,v])=>`<span><b style="font-family:var(--mono)">${v}</b></span>`).join(" · ")+`<span>— a cor do selo é o ator que faz a ação</span>`;
+}
+function buildTree(){
+  $("#tree").innerHTML=GROUPS.map(g=>`<div class="grp">${g.t}${g.s?`<small>${g.s}</small>`:""}</div>`+g.files.map(([id,p,n])=>`<div class="f" id="f-${id}"><span class="p">${p}</span><span class="n">${n}</span><span class="ops"></span></div>`).join("")).join("");
+}
+function renderCard(){
+  const a=ACTORS[sel];
+  $("#card").style.setProperty("--c",col(sel));
+  $("#card").innerHTML=`<h3>${a.n}</h3><div style="color:var(--muted)">${a.r}</div><dl>${Object.entries(a.d).map(([k,v])=>`<dt>${k.replace("_"," ")}</dt><dd>${v}</dd>`).join("")}</dl>`;
+}
+function markActors(){
+  const s=FLOWS[flow].steps[i];
+  document.querySelectorAll(".actor").forEach(b=>{const k=b.dataset.k;b.classList.toggle("on",s.a.includes(k));b.classList.toggle("idle",!s.a.includes(k));b.classList.toggle("sel",k===sel)});
+}
+function boardUpTo(){
+  const steps=FLOWS[flow].steps; const lines=[]; let t=new Date(Date.UTC(2026,10,9,14,2,0));
+  steps.forEach((s,j)=>{(s.b||[]).forEach(b=>{t=new Date(t.getTime()+ (7+lines.length*3)*60000); if(j<=i) lines.push({b,cur:j===i,t:new Date(t)})})});
+  if(flow!=="impl"){$("#board").innerHTML=`<li class="empty">O board só existe dentro de /wh:implementation.</li>`;return}
+  if(!lines.length){$("#board").innerHTML=`<li class="empty">Vazio. impl_env.sh cria o arquivo; cada linha entra por board.sh com o horário que o próprio script carimba.</li>`;return}
+  $("#board").innerHTML=lines.map(({b,cur,t})=>`<li class="${cur?"new":""}">${t.toISOString().slice(0,19)}Z | ${b[0].padEnd(12)} | <span class="k">${b[1].padEnd(8)}</span> | ${esc(b[2])}</li>`).join("");
+  const box=$("#board").parentElement; box.scrollTop=box.scrollHeight;
+}
+function render(){
+  const st=FLOWS[flow].steps, s=st[i];
+  $("#pn").textContent= s.pn==="pré"?"antes da fase 1": (flow==="impl"?"fase "+s.pn:"passo "+s.pn);
+  $("#st").textContent=s.t;
+  $("#narr").innerHTML=s.n;
+  const [fr,to,tx]=s.m;
+  const m=$("#msg"); m.classList.remove("anim"); void m.offsetWidth; m.classList.add("anim");
+  m.innerHTML=`<span class="who" style="--c:${col(fr)}">${ACTORS[fr].n}</span>`+(fr!==to?`<span class="arrow">→</span><span class="who" style="--c:${col(to)}">${ACTORS[to].n}</span>`:`<span class="arrow">· saída</span>`)+`<span class="pl">${esc(tx)}</span>`;
+  $("#note").innerHTML=s.note||""; $("#note").hidden=!s.note;
+  $("#dots").innerHTML=st.map((x,j)=>`<button class="stepdot ${j<i?"done":""} ${j===i?"cur":""}" data-j="${j}" aria-label="Passo ${j+1}: ${esc(x.t)}" title="${esc(x.t)}"></button>`).join("");
+  $("#dots").querySelectorAll(".stepdot").forEach(b=>b.onclick=()=>{stop();i=+b.dataset.j;render()});
+  $("#count").textContent=`${i+1} / ${st.length}`;
+  $("#prev").disabled=i===0; $("#next").disabled=i===st.length-1;
+  if(!s.a.includes(sel)) {sel=s.a.find(a=>a!=="owner")||s.a[0]; renderCard();}
+  markActors();
+  const touched=s.f||{};
+  document.querySelectorAll(".f").forEach(el=>{
+    const id=el.id.slice(2); let v=touched[id];
+    const ops=el.querySelector(".ops");
+    if(!v){el.classList.add("idle");el.classList.remove("hit","gone");ops.innerHTML="";return}
+    if(typeof v[0]==="string") v=[v];
+    el.classList.remove("idle");el.classList.add("hit");el.classList.toggle("gone",v.some(o=>o[0]==="d"));
+    ops.innerHTML=v.map(([o,a])=>`<span class="op" style="--c:${col(a)}" title="${ACTORS[a].n} ${OPS[o]}">${OPS[o]}</span>`).join("");
+  });
+  boardUpTo();
+  renderMap();
+}
+function go(d){const n=FLOWS[flow].steps.length;i=Math.max(0,Math.min(n-1,i+d));render()}
+function stop(){clearInterval(timer);timer=null;$("#play").textContent="▶ Reproduzir"}
+$("#prev").onclick=()=>{stop();go(-1)};
+$("#next").onclick=()=>{stop();go(1)};
+$("#play").onclick=()=>{
+  if(timer){stop();return}
+  if(i===FLOWS[flow].steps.length-1) i=0, render();
+  $("#play").textContent="❚❚ Pausar";
+  timer=setInterval(()=>{if(i>=FLOWS[flow].steps.length-1){stop();return}go(1)},3800);
+};
+document.addEventListener("keydown",e=>{if(e.target.closest("input,textarea"))return;if(e.key==="ArrowRight"){stop();go(1)}if(e.key==="ArrowLeft"){stop();go(-1)}});
+try{const f=localStorage.getItem("wh-flow");if(f&&FLOWS[f])flow=f}catch(e){}
+buildTabs();buildActors();buildTree();renderCard();render();
+</script>
+</body>
+</html>

@@ -8,3 +8,4 @@
 - Rule: the skill has the procedure, the profile has the facts. No skill or agent cites a project command; it cites `profile § Section`.
 - Tests: `python3 -m unittest discover -s tests` (hook against `examples/demo`, `scope.sh`, `preflight.sh`, `check.py`, section references). Shell scripts go through `bash -n` and `shellcheck -S warning` in CI.
 - Changed a skill or the hook: bump `version` in `plugins/wh/.claude-plugin/plugin.json` and adjust the `MANUAL`.
+- Flow page: `site/flow.html` (one self-contained file, no build), published by `.github/workflows/pages.yml` at `https://walter-dalla.github.io/wh-harness/flow.html` and embedded by the portfolio. A change to a skill, agent or script the page describes updates the page in the same PR; `tests/test_site_refs.py` checks the paths it cites.

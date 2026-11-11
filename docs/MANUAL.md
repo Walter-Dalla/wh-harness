@@ -31,6 +31,7 @@ The rule that holds the two halves together: **the skill has the procedure, the 
 | Plugin declaration in the project | `<repo>/.claude/settings.json` | makes whoever clones the project receive the plugin (§4) |
 | Pending folder | `<repo>/<_common § Pending>` (default `docs/pending/`) | owner's open items, one file per item; intake of `/wh:implementation` and home of what a run leaves open (§5.4) |
 | Graph cache | `~/.cache/walter-harness/<hash of the repo path>.json` (or `$WH_CACHE_DIR`) | generated; never version it |
+| Flow page | `site/flow.html` → [walter-dalla.github.io/wh-harness/flow.html](https://walter-dalla.github.io/wh-harness/flow.html) | interactive step-by-step of the agents and the files each one touches; deployed by `.github/workflows/pages.yml` on push to `main` under `site/**`; `?embed=1` for the portfolio's iframe; `tests/test_site_refs.py` keeps its paths real |
 
 ---
 
