@@ -169,7 +169,8 @@ Cost note: the orchestrator runs on the session's model and pays most of the bil
 | `plugins/wh/agents/` | `impl-structure`, `impl-enrich`, `impl-dev`, `impl-qa` |
 | `plugins/wh/hooks/`, `plugins/wh/scripts/prompt_graph.py` | the enrichment hook (Python stdlib only) |
 | `examples/demo` | a tiny bakery project with profiles, a glossary and a feature map |
-| `tests/` | hook, shell scripts, diagnostic and section references |
+| `tests/` | hook, shell scripts, diagnostic, section references and the flow page's paths |
+| `site/` | interactive flow page ([`flow.html`](https://walter-dalla.github.io/wh-harness/flow.html), PT), published on GitHub Pages by `.github/workflows/pages.yml` |
 | [`docs/MANUAL.md`](docs/MANUAL.md) | full technical manual: mechanisms, formats, debugging, known limits |
 | [`docs/testes/`](docs/testes) | test-drive reports and the review that followed them |
 
