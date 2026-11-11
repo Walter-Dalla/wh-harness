@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://walter-dalla.github.io/wh-harness/
+    about: The flow walkthrough; the technical manual is docs/MANUAL.md in the repository.
+  - name: Security vulnerability
+    url: https://github.com/Walter-Dalla/wh-harness/security/advisories/new
+    about: Report security problems privately, not in a public issue.
