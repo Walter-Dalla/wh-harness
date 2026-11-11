@@ -2,7 +2,7 @@
 name: impl-structure
 description: Structurer of a /wh:implementation request: splits the owner's raw request into pending files (format PENDING.md) with locations and code references, no design. Dispatched by the /wh:implementation skill.
 tools: Read, Write, Bash, Skill
-model: opus
+model: sonnet
 ---
 
 `${CLAUDE_PLUGIN_ROOT}` in this text = the root of the `wh` plugin, which the orchestrator's prompt gives as `PLUGIN_ROOT=<path>`; if the text already comes with the path resolved, use it.

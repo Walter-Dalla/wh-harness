@@ -43,10 +43,12 @@ def named(rest, pool):
 
 
 def template_for(path):
-    """PROFILE.md of the skill that owns the file; agents and implementation helpers use implementation's."""
+    """PROFILE.md of the skill that owns the file; agents, implementation helpers and skills without one use implementation's."""
     rel = os.path.relpath(path, PLUGIN).replace(os.sep, '/')
     skill = rel.split('/')[1] if rel.startswith('skills/') else 'implementation'
-    return os.path.join(PLUGIN, 'skills', skill, 'PROFILE.md')
+    own = os.path.join(PLUGIN, 'skills', skill, 'PROFILE.md')
+    # a skill with no template of its own (quick, retro) reads the implementation profile
+    return own if os.path.exists(own) else os.path.join(PLUGIN, 'skills', 'implementation', 'PROFILE.md')
 
 
 def plugin_docs():
@@ -108,6 +110,19 @@ class RefsTest(unittest.TestCase):
                     if not ok:
                         bad.append('%s:%d: %s § %s' % (os.path.relpath(path, ROOT), n, m.group(1), rest[:30].strip()))
         self.assertEqual(bad, [], '\n' + '\n'.join(bad))
+
+    def test_skill_and_agent_files_stay_small(self):
+        """A SKILL.md is re-attached only in part after a compaction, and every byte is paid on every run: the
+        orchestrator's stays under 22 KB, the others under 10 KB, an agent definition under 16 KB. Past the cap, move
+        text to a file read on demand (CLOSE.md, CONSULT.md) instead of raising the number."""
+        caps = [(os.path.join(PLUGIN, 'skills', '*', 'SKILL.md'), 10000), (os.path.join(PLUGIN, 'agents', '*.md'), 16000)]
+        big = []
+        for pattern, cap in caps:
+            for path in sorted(glob.glob(pattern)):
+                limit = 22000 if path.endswith(os.path.join('implementation', 'SKILL.md')) else cap
+                if os.path.getsize(path) > limit:
+                    big.append('%s: %d bytes (cap %d)' % (os.path.relpath(path, ROOT), os.path.getsize(path), limit))
+        self.assertEqual(big, [], '\n' + '\n'.join(big))
 
 
 if __name__ == '__main__':

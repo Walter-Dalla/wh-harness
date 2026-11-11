@@ -32,9 +32,12 @@ Decisions contested by the code QA (decision, objection, outcome); findings of t
 ## Problems found
 Findings out of scope (bugs, neighboring debts), each with evidence.
 
+## Cost
+The table `agent_cost.py` prints (tokens per agent and model, with each one's share of the weighted tokens; not dollars), and one line naming the heaviest agent. "Not measured" and the reason when the script failed.
+
 ## Consolidated retro
 | # | Severity | Category | Evidence (lanes) | Proposal | Who applies |
 Candidates from all retros, deduplicated (the same problem in several lanes = one line citing all), by severity.
 ```
 
-The report only records: fixes are left to the owner, except the profile line that phase 6.2 of `SKILL.md` says to apply.
+The report only records: fixes are left to the owner, except the profile line that phase 6.2 (`CLOSE.md`, step 2) says to apply.

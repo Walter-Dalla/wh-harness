@@ -70,11 +70,12 @@ In a new Claude Code session at the root of your repository:
 | `/wh:adopt` | Onboards a repository: `CLAUDE.md`, profiles, glossary, feature map, `context.json`, `settings.json` |
 | `/wh:profile` | Writes or completes `.claude/profile/_common.md` and one profile per skill, each fact with its source |
 | `/wh:implementation` | A task from request to pull request: analysis, plan, parallel lanes, code QA, final QA, report |
+| `/wh:quick` | The light route for a label, a text or a one-line fix: one edit, one check, one commit and the PR; anything larger is sent to `/wh:implementation` |
 | `/wh:cleanup` | Post-run cleanup: executed plans, open items, stale docs, worktrees |
 | `/wh:retro` | Retrospective of a session: candidates to improve the agent's environment, nothing applied |
 | `/wh:qa-visual` | Drives the real product against an isolated service, reads screenshots, writes a bug report |
 | `/wh:feature-docs` | Keeps a feature map (index + one file per feature) in sync with the code |
-| `/wh:start-app`, `/wh:deploy`, `/wh:brainstorm` | Run the app, publish it, generate product ideas, each from its own profile |
+| `/wh:start-app`, `/wh:deploy` | Run the app and publish it, each from its own profile |
 
 The plugin also ships four subagents used by `/wh:implementation` (`wh:impl-structure`, `wh:impl-enrich`, `wh:impl-dev`, `wh:impl-qa`) and `prompt-graph`, a deterministic `UserPromptSubmit` hook (no LLM, no network) that adds pointers from your glossary, feature map and CodeGraph index to each prompt. The hook runs only in a project that has `.claude/profile/context.json`.
 

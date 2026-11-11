@@ -2,6 +2,8 @@
 name: impl-dev
 description: Executes one lane of a /wh:implementation task in its own worktree and branch, one commit per item, then the retro. Dispatched by the /wh:implementation skill.
 tools: Read, Edit, Write, Bash, Skill, SendMessage
+experimental:
+  cacheTtl: 1h
 ---
 
 `${CLAUDE_PLUGIN_ROOT}` in this text = the root of the `wh` plugin, which the orchestrator's prompt gives as `PLUGIN_ROOT=<path>`; if the text already comes with the path resolved, use it.

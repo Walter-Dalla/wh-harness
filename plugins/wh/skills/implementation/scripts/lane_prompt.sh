@@ -3,18 +3,19 @@
 # the code QA diff. Stdout is the prompt and nothing else.
 #
 #   lane_prompt.sh <slug> <lane> [--qa] [--remote <r>=origin] [--main <b>=main] [--continuation <text>]
-#                  [--retest <ids>] [--areas <text>] [--verify <ids>] [--gates yes|no]
+#                  [--retest <ids>] [--areas <text>] [--verify <ids>] [--gates yes|no] [--retro yes|no]
 #
 # Run at the repository root (any branch). Without --qa: the lane prompt (needs .impl/<slug>/<lane>.md and the
 # branch impl/<slug>; the port is the word after `port ` on the lane file's first line, else —).
 # --qa with a lane: fetches <remote>, writes `git diff <merge-base>...<remote>/impl/<slug>-<lane>` to
 # .impl/<slug>/qa/<lane>.diff and prints the code QA prompt. --qa code: the same over <remote>/impl/<slug> against
-# <main> (no lane file). --qa final: fetches and prints the final QA prompt (no diff).
+# <main> (no lane file). --qa final: fetches and prints the final QA prompt (no diff). --retro no (QA prompts): the
+# `Retro:` field is `—` and the QA writes no retro (small task).
 # Exit 1 with `LANE_PROMPT FAILED: <reason>`: bad call, not the root, lane file missing, ref missing.
 set -u
 
 fail() { echo "LANE_PROMPT FAILED: $*"; exit 1; }
-usage() { fail "usage: lane_prompt.sh <slug> <lane> [--qa] [--remote <r>] [--main <b>] [--continuation <text>] [--retest <ids>] [--areas <text>] [--verify <ids>] [--gates yes|no]"; }
+usage() { fail "usage: lane_prompt.sh <slug> <lane> [--qa] [--remote <r>] [--main <b>] [--continuation <text>] [--retest <ids>] [--areas <text>] [--verify <ids>] [--gates yes|no] [--retro yes|no]"; }
 
 [ $# -ge 2 ] || usage
 slug=$1; lane=$2; shift 2
@@ -22,11 +23,11 @@ case $slug in *[!a-z0-9-]*|'') fail "slug '$slug' is not kebab-case" ;; esac
 case $lane in *[!A-Za-z0-9_-]*|'') fail "lane '$lane' is not a lane name" ;; esac
 
 qa=0; remote=origin; main=main
-continuation='from scratch'; retest=no; areas=none; verify=—; gates=no
+continuation='from scratch'; retest=no; areas=none; verify=—; gates=no; retro=yes
 while [ $# -gt 0 ]; do
   case $1 in
     --qa) qa=1; shift; continue ;;
-    --remote|--main|--continuation|--retest|--areas|--verify|--gates)
+    --remote|--main|--continuation|--retest|--areas|--verify|--gates|--retro)
       [ $# -ge 2 ] && [ -n "$2" ] || fail "$1 without a value" ;;
     *) fail "unknown option $1" ;;
   esac
@@ -38,10 +39,12 @@ while [ $# -gt 0 ]; do
     --areas) areas=$2 ;;
     --verify) verify=$2 ;;
     --gates) gates=$2 ;;
+    --retro) retro=$2 ;;
   esac
   shift 2
 done
 case $gates in yes|no) ;; *) fail "--gates is yes or no, not '$gates'" ;; esac
+case $retro in yes|no) ;; *) fail "--retro is yes or no, not '$retro'" ;; esac
 
 # The template ends each free text with a period: one already at the end is not doubled.
 continuation=${continuation%.}; retest=${retest%.}; areas=${areas%.}; verify=${verify%.}
@@ -80,7 +83,8 @@ if [ "$lane" = final ]; then
   echo "PLUGIN_ROOT=$plugin"
   echo "Mode: final. Task: $slug. Repo: $root. $profile Plan: $impl/PLAN.md."
   echo "Branch: impl/$slug @ $tip. Diff base: $main. Remote: $remote. Touched areas: $areas."
-  echo "Output: $impl/qa/final.md. Retro: $impl/retros/qa-final.md."
+  retrofile=$impl/retros/qa-final.md; [ "$retro" = yes ] || retrofile=—
+  echo "Output: $impl/qa/final.md. Retro: $retrofile."
   echo "Commands: profile § Worktree commands before the 1st command; git = $gitbin -C <worktree> …, one command per call."
   echo "Retest: $retest."
   echo "Verify: $verify."
@@ -104,6 +108,7 @@ git -c core.quotepath=off diff --no-color --no-ext-diff --src-prefix=a/ --dst-pr
 echo "PLUGIN_ROOT=$plugin"
 echo "Mode: code. Task: $slug. Repo: $root. $profile Plan: $impl/PLAN.md. Lane: $lanelabel."
 echo "Branch: $branch @ $tip. Diff base: $base. Remote: $remote. Diff: $diff."
-echo "Output: $impl/qa/$lane.md. Retro: $impl/retros/qa-$lane.md."
+retrofile=$impl/retros/qa-$lane.md; [ "$retro" = yes ] || retrofile=—
+echo "Output: $impl/qa/$lane.md. Retro: $retrofile."
 echo "Commands: git = $gitbin -C $root …, one command per call."
 echo "Retest: $retest."

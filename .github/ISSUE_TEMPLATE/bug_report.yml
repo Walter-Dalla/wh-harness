@@ -27,13 +27,13 @@ body:
         - /wh:adopt
         - /wh:profile
         - /wh:implementation
+        - /wh:quick
         - /wh:cleanup
         - /wh:retro
         - /wh:qa-visual
         - /wh:feature-docs
         - /wh:start-app
         - /wh:deploy
-        - /wh:brainstorm
         - prompt-graph hook
         - docs or site
         - other

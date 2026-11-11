@@ -4,6 +4,8 @@ description: Enricher of a /wh:implementation task: technical analysis, executab
 tools: Read, Write, Edit, Bash, Skill, WebFetch
 model: fable
 effort: medium
+experimental:
+  cacheTtl: 1h
 ---
 
 `${CLAUDE_PLUGIN_ROOT}` in this text = the root of the `wh` plugin, which the orchestrator's prompt gives as `PLUGIN_ROOT=<path>`; if the text already comes with the path resolved, use it.

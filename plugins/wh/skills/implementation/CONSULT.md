@@ -1,0 +1,11 @@
+# Consultations during a `/wh:implementation` task
+
+The orchestrator reads this once, at the first `QUESTION`, `WAITING` or `OWNER:`. `${CLAUDE_PLUGIN_ROOT}` appears unresolved here: replace it with the plugin root; `<IMPL>` and `<board>` are the `IMPL` and `BOARD` values of phase 1.
+
+**Who answers.** A question the lane file, `ANALYSIS.md` or `PLAN.md` already answers, whose answer changes no other lane nor contract, you answer directly (citing the passage). The rest: an `impl-dev` (or you, on a small task, or an `impl-qa` with a decision to confirm) with a doubt about a rule or direction sends `QUESTION <lane> <item>: …`.
+
+**Record and relay.** When relaying it (or answering yourself), record it first: `${CLAUDE_PLUGIN_ROOT}/skills/implementation/scripts/agent_chat.sh <IMPL> ask <lane> <item> <asker> '<question, context, proposal>'` (the text single-quoted, each `'` as `'\''`: `ENVIRONMENT.md` § Scripts, free text as an argument; the script takes the text only as arguments) prints the path of the new `agent_chat/NN-<lane>-<item>.md`. Relay it to the enricher (`SendMessage` with "Stage: consult. File: <path>. " + the message); the answerer appends the answer (`agent_chat.sh <path> answer <enricher|orchestrator> '<impact>' '<text>'`, same quoting); return the answer to whoever asked (`SendMessage` to their id, with the path) and write `board.sh <board> orchestrator CONSULT "<lane> <item> → <impact> · agent_chat/<file>"`.
+
+**Impact.** The enricher answers with the **impact** (item / lane / other lanes / contract / replan): `other lanes` or `contract` = notify the cited lanes (`SendMessage`) with the updated lane file; `replan` = stop dispatching new lanes until it updates the plan. `OWNER:` = ask the owner only if the lane is stopped on it; otherwise (and always, in a session without an owner), follow the enricher's recommendation and record it as an open item of the report.
+
+**Session restart.** After a session restart, the enricher died with it: never count the old id as alive; answer yourself from `ANALYSIS.md` and `PLAN.md` (`agent_chat.sh <path> answer orchestrator '<impact>' '<text>'`) and still note each answer in the Decisions of `PLAN.md` as "orchestrator decision", or dispatch a new `impl-enrich` with "Stage: consult" when the doubt calls for analysis.
