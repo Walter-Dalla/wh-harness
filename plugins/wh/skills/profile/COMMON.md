@@ -12,7 +12,7 @@ Where the session and the worktrees run (native toolchain) and what the other ch
 The commands that change per checkout or OS: build/test (`dotnet` vs `dotnet.exe`, `pnpm`…), local HTTP (`curl` vs `curl.exe`), Python, how to kill a process. How to reach localhost on the other side (WSL ↔ Windows).
 
 ## Git
-Main branch: `main`. PR remote: `origin` (or the name that points at GitHub). Protected branches. Identity and push (e.g. `git -c user.name=…`, `git.exe push` when the credential lives on Windows). Checkout shared with other sessions: `git branch --show-current` before committing.
+Main branch: `main`. PR remote: `origin` (or the name that points at GitHub). Protected branches. Identity and push (e.g. `git -c user.name=…`, `git.exe push` when the credential lives on Windows). Checkout shared with other sessions: `git branch --show-current` before committing or switching branch; a checkout another session may be using is never switched (work in a worktree).
 
 ## Ports
 The owner's (never used by a skill): e.g. `5000`. Range for the `/wh:implementation` agents (6 ports): e.g. `5100–5105`. Visual/e2e QA: e.g. from `5108` up (first free one; never kills what already sits on a port). The numbers are examples: put the repo's, with the source.

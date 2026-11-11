@@ -1,5 +1,12 @@
 # Profile of /wh:implementation
 
+## Commands
+build: — [owner]
+suite: `python3 -m unittest discover -s tests -q` [CLAUDE.md]
+typecheck: `shellcheck -S warning plugins/wh/skills/*/scripts/*.sh` [ci: ci.yml]
+service: — [owner]
+health: — [owner]
+
 ## Build
 — (no build; Python and shell run as they are) [owner]
 
@@ -44,6 +51,7 @@ Changelog: — . Version: `plugins/wh/.claude-plugin/plugin.json` `version` bump
 
 ## Worktree commands
 Any Bash argument naming a path with `git` in it (e.g. `.gitignore`) is refused: read it with `Read` [retro: templates]
-`board.sh` text with `<`, `>` or `->` is refused: write the text without them [retro: wiring]
+`board.sh` text with `<`, `>`, `->`, backticks or `|` is refused: describe formats in words [retro: wiring, check]
+The suite runs from the worktree root (`profile_run.sh suite <worktree>`, or `cd <worktree>` then the suite); `discover -s <absolute path>` fails "Start directory is not importable" [retro: runners, wiring, inventory, qa-final]
 No shell variables in paths (`W=…; sed $W/…`) and no `;`/`for` chains: one simple command per call [retro: wiring, qa-final]
 `git reset --hard <hash>` is refused by the auto-mode classifier: check `git log --oneline -1` first and reset only when HEAD differs [retro: qa-final]
