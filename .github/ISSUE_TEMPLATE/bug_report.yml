@@ -1,0 +1,61 @@
+name: Bug report
+description: Something in the plugin does not work as documented
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you ran, what you expected and what you got instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. In a repository with ...
+        2. Run `/wh:...`
+        3. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: piece
+    attributes:
+      label: Piece
+      options:
+        - /wh:adopt
+        - /wh:profile
+        - /wh:implementation
+        - /wh:cleanup
+        - /wh:retro
+        - /wh:qa-visual
+        - /wh:feature-docs
+        - /wh:start-app
+        - /wh:deploy
+        - /wh:brainstorm
+        - prompt-graph hook
+        - docs or site
+        - other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Plugin version
+      description: The `version` in plugin.json, or the output of `claude plugin list`.
+    validations:
+      required: true
+  - type: input
+    id: claude
+    attributes:
+      label: Claude Code version and OS
+      placeholder: "claude --version · Ubuntu 24.04 / macOS 15 / WSL2"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Output or logs
+      description: Remove secrets and private code before pasting.
+      render: text
