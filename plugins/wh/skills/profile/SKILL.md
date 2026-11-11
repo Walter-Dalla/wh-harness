@@ -5,7 +5,7 @@ description: Generates or completes a skill's project profile (.claude/profile/_
 
 # Project profile
 
-Argument: the skill name (`start-app`, `deploy`, `implementation`…), and `defer` after it when the calling skill will confirm the `[inferred]` lines itself (§ 3). No argument, or only `defer`: `implementation` plus the skills whose source exists in the repo (`deploy` with a deploy folder or workflow; `start-app` with a service or client to bring up; `qa-visual` with a QA harness; `feature-docs` with a features folder; `cleanup` with a changelog or plan folder); `brainstorm` only with an argument. Templates in `${CLAUDE_PLUGIN_ROOT}/skills/*/PROFILE.md`. A profile for a skill the repo does not use is versioned junk, not one more `—`.
+Argument: the skill name (`start-app`, `deploy`, `implementation`…), and `defer` after it when the calling skill will confirm the `[inferred]` lines itself (§ 3). No argument, or only `defer`: `implementation` plus the skills whose source exists in the repo (`deploy` with a deploy folder or workflow; `start-app` with a service or client to bring up; `qa-visual` with a QA harness; `feature-docs` with a features folder; `cleanup` with a changelog or plan folder). Templates in `${CLAUDE_PLUGIN_ROOT}/skills/*/PROFILE.md`. A profile for a skill the repo does not use is versioned junk, not one more `—`.
 
 A **profile** is what a generic skill needs to know about the repository and cannot discover on its own: commands, paths, ports, docs, limits. Facts only, each with its source in brackets; the procedure stays in the skill. Two files, versioned in the repo, read only by the skill (they never load on their own):
 

@@ -18,9 +18,10 @@ Then run `/wh:adopt` at the root of a repository: it diagnoses what is missing a
 | `/wh:adopt` | onboards a repository: map, profiles, glossary, feature map, `context.json`, `settings.json`, project `Explore` and `Plan` agents |
 | `/wh:profile` | writes or completes `.claude/profile/_common.md` and one profile per skill |
 | `/wh:implementation` | a task from request to pull request: analysis and plan by an enricher subagent, parallel lanes in worktrees, code QA, final QA, retros, report |
+| `/wh:quick` | the light route: a label, a text or a one-line fix as one edit, one check, one commit and the PR, with no subagent; larger changes are sent to `/wh:implementation` |
 | `/wh:cleanup` | post-run cleanup of executed plans, open items, stale docs and worktrees |
 | `/wh:retro` | retrospective of a session: candidates to improve the agent's environment |
-| `/wh:start-app`, `/wh:qa-visual`, `/wh:feature-docs`, `/wh:deploy`, `/wh:brainstorm` | the rest of the lifecycle, each driven by its own profile |
+| `/wh:start-app`, `/wh:qa-visual`, `/wh:feature-docs`, `/wh:deploy` | the rest of the lifecycle, each driven by its own profile |
 
 Subagents: `wh:impl-structure`, `wh:impl-enrich`, `wh:impl-dev`, `wh:impl-qa`, spawned by `/wh:implementation`. `/wh:adopt agents` also copies project versions of Claude Code's `Explore` and `Plan` agents into `.claude/agents/`, so they follow the repo's navigation rules (CodeGraph, glossary, feature map, certainty marks).
 

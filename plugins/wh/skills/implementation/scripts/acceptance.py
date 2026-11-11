@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""Runs the Acceptance command of each item of a lane file or PLAN.md and reports the exit code, deterministically.
+r"""Runs the Acceptance command of each item of a lane file or PLAN.md and reports the exit code, deterministically.
 
     acceptance.py <lane.md | PLAN.md> <worktree> [--only <id>[,<id>]] [--log <dir> --lane <name>] [--timeout <s>]
 
 Lane file: a `## <id> · …` heading followed by `Acceptance: \`<command>\`` in its body. PLAN.md: a table row
-`| <id> | … | \`<command>\` |` (the last backticked cell is the Acceptance). Each command runs with bash in the
+`| <id> | … | \`<command>\` |` (the last backticked cell is the Acceptance). Lines inside a ``` fence are
+not read (a `## ` example in a lane file is not an item). Each command runs with bash in the
 worktree, stdout and stderr captured. Output, one line per item: `<id> · exit <n> · <command>`; with `--log`,
 the output of each goes to `<dir>/<lane>-<id>.log` (the lane's Acceptance log the code QA reads). Final line:
 `ACCEPTANCE: <green> green, <red> red, <skipped> without command`. Exit 0 after running (red is information:
-red before the item, green after), 2 when the file has no item.
+red before the item, green after), 2 when the file has no item or an unclosed fence.
 """
 import os
 import re
@@ -23,8 +24,13 @@ TICK = re.compile(r'`([^`]+)`')
 
 def parse(text):
     """[(id, command or None)] in file order; a lane heading without Acceptance gives None."""
-    items, current = [], None
+    items, current, fenced = [], None, False
     for line in text.splitlines():
+        if line.lstrip().startswith('```'):
+            fenced = not fenced
+            continue
+        if fenced:
+            continue
         m = ROW.match(line)
         if m and not line.startswith('| Id') and not set(line.strip()) <= set('|-: '):
             ticks = TICK.findall(m.group(2))
@@ -52,7 +58,11 @@ def main(argv):
     timeout = int(args.get('--timeout', '600'))
     try:
         with open(path, encoding='utf-8') as fh:
-            items = parse(fh.read())
+            text = fh.read()
+        if sum(1 for line in text.splitlines() if line.lstrip().startswith('```')) % 2:
+            print('ACCEPTANCE FAILED: unclosed ``` fence in %s (the items after it would be skipped)' % path)
+            return 2
+        items = parse(text)
     except OSError as exc:
         print('ACCEPTANCE FAILED: %s' % exc)
         return 2

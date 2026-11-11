@@ -23,7 +23,7 @@ MARKETPLACE, PLUGIN_ID = 'wh-harness', 'wh@wh-harness'
 CONTEXT_KEYS = {'glossario', 'features', 'indice_features', 'codegraph', 'class_name_globs', 'max_features',
                 'max_termos', 'max_simbolos', 'max_interage', 'min_score', 'min_prompt', 'max_chars', 'idioma',
                 'secoes'}
-NO_PROFILE = {'profile', 'retro', 'adopt'}
+NO_PROFILE = {'profile', 'retro', 'adopt', 'quick'}
 AGENTS_DIR = os.path.join('.claude', 'agents')
 TEMPLATE_MARK = re.compile(r'<!--\s*wh-template:\s*(\S+)\s+(\d+)\s*-->')
 COMMAND_KEYS = ('build', 'suite', 'typecheck', 'service', 'health')

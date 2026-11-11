@@ -55,7 +55,7 @@ Severity: **critical** (data corruption, exposure, central flow broken), **high*
 Also: state (`ENVIRONMENT.md` § States: `DONE` with no critical or high finding, `FAILED` with one), plan decisions you confirmed (one line), tests (exit and counts, mode `final`), and on a retest the state of each id (fixed / back), including the neighboring findings of the same area.
 
 ## End
-1. Retro: `${CLAUDE_PLUGIN_ROOT}/skills/implementation/REPORT.md` § Retro, written to the prompt's path (output and retro are absolute, in `<root>/.impl/<slug>/`, never in the worktree). Mode `final` (worktree): write each one through Bash, `cat > <absolute path> <<'EOF'`, one simple call per file; never `Write`/`Edit` outside the worktree. Mode `code` (clone): `Write`. Rule: `ENVIRONMENT.md` § Files outside the worktree.
+1. Retro (`Retro: —` in the prompt = none: skip this step and put what the environment got wrong in one line of the final answer): `${CLAUDE_PLUGIN_ROOT}/skills/implementation/REPORT.md` § Retro, written to the prompt's path (output and retro are absolute, in `<root>/.impl/<slug>/`, never in the worktree). Mode `final` (worktree): write each one through Bash, `cat > <absolute path> <<'EOF'`, one simple call per file; never `Write`/`Edit` outside the worktree. Mode `code` (clone): `Write`. Rule: `ENVIRONMENT.md` § Files outside the worktree.
 2. Final answer (≤ 10 lines): state, findings by type and severity, the critical and high ones, tests, output path. Write refused: the whole output and retro go in the answer, each under its destination path.
 
 Limits: those of `_common` § Limits (the owner's ports, production, real MCPs); no commit, push or code edit.

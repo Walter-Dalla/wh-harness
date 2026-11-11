@@ -189,6 +189,8 @@ def skeleton(slug, impl, pr):
 
     out += ['', '## Problems found', 'TODO(orchestrator): findings out of scope']
 
+    out += ['', '## Cost', 'TODO(orchestrator): the table agent_cost.py prints, or "not measured" and why']
+
     out += ['', '## Consolidated retro']
     if not os.path.isdir(os.path.join(impl, 'retros')):
         out.append('TODO(orchestrator): no retros/ folder at %s' % os.path.join(impl, 'retros'))

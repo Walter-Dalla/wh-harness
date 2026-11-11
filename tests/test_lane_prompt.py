@@ -174,6 +174,16 @@ class LanePromptTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn('LANE_PROMPT FAILED: ref origin/impl/demo missing', out)
 
+    def test_retro_no_blanks_the_retro_field_of_a_qa_prompt(self):
+        git(self.repo, 'push', '-q', 'origin', 'impl/demo')
+        out = '\n'.join(self.prompt('final', '--qa', '--retro', 'no'))
+        self.assertIn('Retro: —.', out)
+        self.assertNotIn('retros/qa-final.md', out)
+        self.assertIn('retros/qa-final.md', '\n'.join(self.prompt('final', '--qa')))
+        code, out = run(LANE_PROMPT, self.repo, 'demo', 'final', '--qa', '--retro', 'maybe')
+        self.assertEqual(code, 1)
+        self.assertIn('--retro is yes or no', out)
+
     def test_drift_guard_against_the_templates(self):
         git(self.repo, 'push', '-q', 'origin', 'impl/demo')
         for name, marker, args in (('LANES.md', '\nLane: <lane>', ('f1',)),

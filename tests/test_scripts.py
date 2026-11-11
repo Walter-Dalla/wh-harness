@@ -402,6 +402,28 @@ class ScriptsTest(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn('ACCEPTANCE FAILED: no item', out)
 
+    def test_acceptance_skips_fenced_headings_and_compiles_without_warning(self):
+        lane = self.lane('# f1 · demo\n## demo-1 · a · internal\nAcceptance: `true`.\n```markdown\n'
+                         '## demo-9 · example · internal\nAcceptance: `false`.\n```\n')
+        code, out = self.accept(lane, self.repo)
+        self.assertEqual(code, 0, out)
+        self.assertNotIn('demo-9', out)
+        self.assertIn('ACCEPTANCE: 1 green, 0 red, 0 without command', out)
+        code, out = self.accept(self.lane('# f1\n## demo-1 · a · internal\nAcceptance: `true`.\n```\n## demo-2 · b · internal\n'), self.repo)
+        self.assertEqual(code, 2)
+        self.assertIn('ACCEPTANCE FAILED: unclosed', out)
+
+    def test_every_python_script_compiles_without_warning(self):
+        import glob
+        files = glob.glob(os.path.join(ROOT, 'plugins', 'wh', '**', '*.py'), recursive=True)
+        self.assertTrue(files)
+        for f in files:
+            with open(f, encoding='utf-8') as fh:
+                src = fh.read()
+            p = subprocess.run([sys.executable, '-W', 'error', '-c', 'import sys; compile(sys.stdin.read(), sys.argv[1], "exec")', f],
+                               input=src, capture_output=True, text=True)
+            self.assertEqual(p.returncode, 0, '%s: %s' % (f, p.stderr[-300:]))
+
     # ---- cleanup_worktrees.sh
 
     def test_cleanup_removes_only_the_run_worktrees_and_saves_changes(self):
