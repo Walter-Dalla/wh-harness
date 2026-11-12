@@ -3,7 +3,8 @@
 - every literal `plugins/wh/...` path (globs allowed) matches a file;
 - every row of the "Plugin wh" group of the file tree (`[id, prefix, "a · b.md"]`) names existing files;
   a name without an extension takes the extension of the row's last name;
-- every `wh:<skill>` is a skill, every `impl-<name>` agent is an agent, every `x.sh` / `x.py` is a plugin script.
+- every `wh:<skill>` is a skill, every `impl-<name>` agent is an agent, every `x.sh` / `x.py` is a plugin script;
+- every text written in one language (`pt:`) has the other (`en:`), and the Pages workflow publishes both paths.
 
     python3 -m unittest discover -s tests
 """
@@ -27,8 +28,8 @@ def exists(rel):
 
 
 def tree_paths(text):
-    """Repo paths of the rows of the "Plugin wh" group of GROUPS."""
-    start = text.index('{t:"Plugin wh"')
+    """Repo paths of the rows of the "plugin" group of GROUPS."""
+    start = text.index('{id:"plugin"')
     group = text[start:text.index(']]}', start)]
     out = []
     for prefix, names in re.findall(r'\["\w+","([^"]*)","([^"]*)"\]', group):
@@ -71,6 +72,16 @@ class SiteRefsTest(unittest.TestCase):
         self.assertIn('board.sh', names)
         on_disk = {os.path.basename(p) for p in glob.glob(os.path.join(PLUGIN, '**', '*.*'), recursive=True)}
         self.assertEqual(sorted(names - on_disk), [])
+
+    def test_both_languages(self):
+        # Texts are `{pt:..., en:...}` pairs (or one `pt:{...}` / `en:{...}` block each).
+        pt = len(re.findall(r'[{,\s]pt:', self.text))
+        self.assertGreater(pt, 50)
+        self.assertEqual(pt, len(re.findall(r'[{,\s]en:', self.text)))
+        with open(os.path.join(ROOT, '.github', 'workflows', 'pages.yml'), encoding='utf-8') as fh:
+            workflow = fh.read()
+        self.assertIn('for lang in pt en', workflow)
+        self.assertIn('cp site/flow.html "_site/$lang/index.html"', workflow)
 
 
 if __name__ == '__main__':

@@ -20,8 +20,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      # /pt/ and /en/ are copies of the flow page: it picks its language from the path.
+      - name: Language paths
+        run: |
+          cp -r site _site
+          for lang in pt en; do
+            mkdir -p "_site/$lang"
+            cp site/flow.html "_site/$lang/index.html"
+          done
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: site
+          path: _site
       - id: deploy
         uses: actions/deploy-pages@v4
