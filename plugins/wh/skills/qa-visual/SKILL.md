@@ -50,6 +50,17 @@ The docs of profile § Context (layer rules, feature map, status): the criteria 
 - **Time**: profile § Timings (shortest action, wait slack); an unfeasible wait = "Partial" item.
 - **Backend**: state before and after every state-changing step, compared with the screen.
 
+## 3. Web client with no harness in the repo
+
+Profile § Harness `—` and the client is a web page: drive it with the plugin's driver instead of writing one for the round (four runs of 2026-11 each wrote their own and lost it with the task folder):
+
+`node ${CLAUDE_PLUGIN_ROOT}/skills/qa-visual/scripts/cdp.mjs <steps.json> [--size <W>x<H>] [--scheme light|dark] [--console fail|show|ignore]`
+
+- No dependency: Node 22 or newer and a Chromium (the header of the file lists where it looks, the steps and the output). `CDP FAILED` = "Blocked (needs Node 22 and a Chromium)".
+- One steps file per scenario, in the scenarios folder of profile § Output: `goto`, `click`, `type`, `key` (real input), `wait` (by text or state), `eval` (reads; with `expect` it asserts), `shot` (viewport, whole page or one element, below the fold included), plus `size`, `scheme` and `storage` for resolution, theme and language.
+- A layout question is answered by an `eval` that measures (bounding boxes, `scrollWidth <= clientWidth`); the screenshot is the evidence you still open and read.
+- `--console show` when the scenario provokes expected errors (a refused request logs one); every `CONSOLE` line left unexplained is a finding.
+
 ## 4. Rules
 
 - One feature at a time; move on only with it documented in the report.

@@ -2,9 +2,13 @@
 # Prints the dispatch prompt of a /wh:implementation lane or QA, with the same labels the agents read, and writes
 # the code QA diff. Stdout is the prompt and nothing else.
 #
-#   lane_prompt.sh <slug> <lane> [--qa] [--remote <r>=origin] [--main <b>=main] [--continuation <text>]
+#   lane_prompt.sh <slug> <lane> [--qa] [--remote <r>] [--main <b>] [--continuation <text>]
 #                  [--retest <ids>] [--areas <text>] [--verify <ids>] [--gates yes|no] [--retro yes|no]
 #
+# --main and --remote default to the run's own: the MAIN= and REMOTE= lines impl_env.sh left in .impl/<slug>/env
+# (a run on `master`, or on a base branch the owner named, needs no flag); without that file, main and origin.
+# `Profile:` is the copy in the integration worktree (.claude/worktrees/impl-<slug>) when it has one: the clone's
+# checkout stays on <main> and its profile goes stale as soon as a lane updates it.
 # Run at the repository root (any branch). Without --qa: the lane prompt (needs .impl/<slug>/<lane>.md and the
 # branch impl/<slug>; the port is the word after `port ` on the lane file's first line, else —).
 # --qa with a lane: fetches <remote>, writes `git diff <merge-base>...<remote>/impl/<slug>-<lane>` to
@@ -22,7 +26,7 @@ slug=$1; lane=$2; shift 2
 case $slug in *[!a-z0-9-]*|'') fail "slug '$slug' is not kebab-case" ;; esac
 case $lane in *[!A-Za-z0-9_-]*|'') fail "lane '$lane' is not a lane name" ;; esac
 
-qa=0; remote=origin; main=main
+qa=0; remote=; main=
 continuation='from scratch'; retest=no; areas=none; verify=—; gates=no; retro=yes
 while [ $# -gt 0 ]; do
   case $1 in
@@ -54,7 +58,14 @@ root=$(git rev-parse --show-toplevel 2>/dev/null) || fail "not inside a git repo
 plugin=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd) || fail "cannot resolve the plugin root"
 gitbin=$(command -v git)
 impl=$root/.impl/$slug
-profile="Profile: $root/.claude/profile/implementation.md and _common.md."
+fact() { [ -f "$impl/env" ] && sed -n "s/^$1=//p" "$impl/env" | head -n 1; }
+[ -n "$main" ] || main=$(fact MAIN)
+[ -n "$main" ] || main=main
+[ -n "$remote" ] || remote=$(fact REMOTE)
+[ -n "$remote" ] || remote=origin
+profroot=$root
+[ -f "$root/.claude/worktrees/impl-$slug/.claude/profile/implementation.md" ] && profroot=$root/.claude/worktrees/impl-$slug
+profile="Profile: $profroot/.claude/profile/implementation.md and _common.md."
 lanefile=$impl/$lane.md
 
 rev() { got=$(git rev-parse --verify -q "$1^{commit}") || fail "ref $1 missing"; }

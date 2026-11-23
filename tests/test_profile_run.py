@@ -56,6 +56,19 @@ class ProfileRunTest(unittest.TestCase):
         self.assertEqual(code, 0, out)
         self.assertEqual(out, 'PROFILE_RUN typecheck: skipped\n')
 
+    def test_health_is_retried_until_it_answers(self):
+        """A service started a moment ago: the first try fails, the second (one second later) answers."""
+        self.profile(PROFILE.replace('health: `true`', 'health: `test -f up || { touch up; exit 7; }`'))
+        code, out = run(PROFILE_RUN, self.tmp, 'health', self.wt, '--wait', '0')
+        self.assertEqual((code, out.splitlines()[-1]), (7, 'PROFILE_RUN health: exit 7'))
+        os.remove(os.path.join(self.wt, 'up'))
+        code, out = run(PROFILE_RUN, self.tmp, 'health', self.wt)
+        self.assertEqual((code, out.splitlines()[-1]), (0, 'PROFILE_RUN health: exit 0'))
+        for args, reason in ((('health', '--wait', 'soon'), 'not a number of seconds'), (('build', '--wait', '3'), 'only applies to health')):
+            code, out = run(PROFILE_RUN, self.tmp, args[0], self.wt, *args[1:])
+            self.assertEqual(code, 2, out)
+            self.assertIn(reason, out)
+
     def test_print_replaces_port_and_slug(self):
         code, out = run(PROFILE_RUN, self.tmp, 'service', self.wt, '--print', '--port', '5101', '--slug', 'demo')
         self.assertEqual(code, 0, out)

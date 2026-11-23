@@ -10,7 +10,7 @@ Project profile (injected; `PROFILE_MISSING` = `Skill(wh:profile, "cleanup")` an
 
 Input: a `slug` from `/wh:implementation` (scope = `<main>...impl/<slug>` and the plan folder of profile § Consumed), or a list of plan files/folders and a commit range. You work on the run's branch; everything becomes one commit in the format of profile § Commit.
 
-Every **open finding has a home**, and only one: the table in profile § Homes; a to-do or owner decision with no row goes to the folder of `_common § Pending`.
+Every **open finding has a home**, and only one: the table in profile § Homes; a to-do or owner decision with no row goes to the pending folder, `<clone root>/pending/`.
 
 ## 1. Inventory
 
@@ -23,7 +23,7 @@ With a `slug`, start from `python3 -I "${CLAUDE_PLUGIN_ROOT}/skills/cleanup/scri
 
 ## 2. Save what is open
 
-In each consumed `.md`, what was **not** executed or remained as a finding (skipped item, partial, `HUMAN`, decision for later, "out of scope") goes to its home from profile § Homes, with the evidence in one line, if the home does not have it yet. A home in the folder of `_common § Pending` = a new pending file there (format `${CLAUDE_PLUGIN_ROOT}/skills/implementation/PENDING.md`), with the id from `${CLAUDE_PLUGIN_ROOT}/skills/implementation/scripts/intake.sh <dir> --next` (`<dir>` = the worktree of the run's branch when it has one, where its new pending files live; else the repo root). A status or open-item line the run resolved (check in the code) leaves.
+In each consumed `.md`, what was **not** executed or remained as a finding (skipped item, partial, `HUMAN`, decision for later, "out of scope") goes to its home from profile § Homes, with the evidence in one line, if the home does not have it yet. A home in the pending folder = a new pending file there (format `${CLAUDE_PLUGIN_ROOT}/skills/implementation/PENDING.md`), with the id from `${CLAUDE_PLUGIN_ROOT}/skills/implementation/scripts/intake.sh <root> --next` (`<root>` = the clone root, never a worktree: the folder is gitignored and lives only there, so the file is written by absolute path and is not part of the commit of § 5). A status or open-item line the run resolved (check in the code) leaves.
 
 **Done when every open item of the consumed files is in a home and no home lists something this run already resolved.**
 

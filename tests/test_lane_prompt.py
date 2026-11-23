@@ -140,6 +140,26 @@ class LanePromptTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn('LANE_PROMPT FAILED: ref nobranch missing', out)
 
+    def test_main_and_remote_default_to_the_runs_fact_sheet(self):
+        """No flag: MAIN= and REMOTE= of .impl/<slug>/env (a run on another base branch); a flag still wins."""
+        git(self.repo, 'remote', 'add', 'up', os.path.join(self.tmp, 'remote.git'))
+        git(self.repo, 'branch', 'trunk', self.base)
+        git(self.repo, 'push', '-q', 'up', 'impl/demo')
+        self.write('.impl/demo/env', 'ROOT=x\nMAIN=trunk\nREMOTE=up\nBASE=y\n')
+        tip = git(self.repo, 'rev-parse', 'impl/demo')
+        self.assertEqual(self.prompt('final', '--qa')[2],
+                         'Branch: impl/demo @ %s. Diff base: trunk. Remote: up. Touched areas: none.' % tip)
+        self.assertEqual(self.prompt('f1')[2], 'Branch: impl/demo-f1. Base: impl/demo @ %s. Remote: up.' % tip)
+        self.assertIn('Diff base: main. Remote: origin.', self.prompt('final', '--qa', '--main', 'main', '--remote', 'origin')[2])
+
+    def test_profile_is_the_integration_worktrees_copy(self):
+        intwt = os.path.join(self.root, '.claude', 'worktrees', 'impl-demo')
+        self.assertIn('Profile: %s/.claude/profile/implementation.md' % self.root, self.prompt('f1')[1])
+        self.write('.claude/worktrees/impl-demo/.claude/profile/implementation.md', '# Profile\n')
+        for args in (('f1',), ('f1', '--qa')):
+            self.assertIn('Repo: %s. Profile: %s/.claude/profile/implementation.md and _common.md.' % (self.root, intwt),
+                          self.prompt(*args)[1], args)
+
     def test_final_qa(self):
         git(self.repo, 'push', '-q', 'origin', 'impl/demo')
         tip = git(self.repo, 'rev-parse', 'impl/demo')

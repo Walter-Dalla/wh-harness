@@ -1,13 +1,13 @@
 # Pending file (intake of /wh:implementation)
 
-One file per open item of the owner, `P-NNN-<slug>.md`, in the folder of `_common § Pending`. The structurer or the owner writes it, the enricher refines it, and it leaves the folder when it lands (the commit cites the id) or when the owner drops it.
+One file per open item of the owner, `P-NNN-<slug>.md`, in `<clone root>/pending/`, the only folder `/wh:implementation` reads by itself (the owner may point one run at another folder, or describe an item in the request instead). The folder is local to the clone: gitignored, never committed, absent from every worktree; agents read and write it by absolute path under the clone root. The structurer or the owner writes a file, the enricher refines it, and it moves to the `done/` subfolder when it lands (`status: done`; the closing commit cites the id, which is never reused) or when the owner drops it.
 
 ## Format
 
 ```markdown
 ---
 id: P-NNN
-status: open | in progress | dropped
+status: open | in progress | dropped | done
 created: YYYY-MM-DD
 related: [P-NNN, …]
 ---
@@ -36,7 +36,7 @@ What the owner still decides, one `- <question>` per line; an answered one stays
 ```
 
 ## Who writes what
-- **Structurer** (`impl-structure`): the owner's raw request → files, in the integration worktree; the orchestrator commits them.
+- **Structurer** (`impl-structure`): the owner's raw request → files, in the clone's pending folder; nothing is committed.
 - **Enricher**: confirms each line of Locations with `[code file:line]` and corrects the file in place.
-- **Close step**: resolved files leave the folder; open items become new files numbered by `${CLAUDE_PLUGIN_ROOT}/skills/implementation/scripts/intake.sh <intwt> --next`.
+- **Close step**: landed files move to `done/`; open items become new files numbered by `${CLAUDE_PLUGIN_ROOT}/skills/implementation/scripts/intake.sh <root> --next`.
 - **Owner**: by hand, any time.

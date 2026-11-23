@@ -2,10 +2,10 @@
 
 ## Retro (each lane and the orchestrator)
 
-`Skill(wh:retro, "file: <path>")` about your own session, from memory (without rereading large logs). The skill's "present to the user" step becomes the file `<root>/.impl/<slug>/retros/<lane|orchestrator>.md` (≤ 40 lines, ≤ 6 candidates); no proposal is applied. Agent in a worktree: the file is written through Bash with a heredoc (`ENVIRONMENT.md` § Files outside the worktree).
+`Skill(wh:retro, "file: <path>")` about your own session, from memory (without rereading large logs). The skill saves the retro in `<root>/retro/<timestamp>-<slug>-<lane|orchestrator>.md` (gitignored; it outlives the cleanup of `.impl/`) and copies it to `<root>/.impl/<slug>/retros/<lane|orchestrator>.md`, the copy the report reads (≤ 40 lines, ≤ 6 candidates, in English); no proposal is applied. Agent in a worktree: the file is written through Bash with a heredoc (`ENVIRONMENT.md` § Files outside the worktree).
 
 ```markdown
-# Retro · <lane> · <date>
+# Retro · <lane or session> · <date>
 | # | Severity | Category | Evidence (what happened, command/file) | Proposal (file and change) | Who applies (repo / owner, outside the repo) |
 ```
 

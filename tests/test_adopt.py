@@ -118,7 +118,7 @@ class ChecarTest(unittest.TestCase):
         shutil.copytree(DEMO, repo)
         self.write(repo, 'CLAUDE.md', '# mapa\n')
         self.write(repo, '.claude/settings.json', json.dumps(SETTINGS))
-        self.write(repo, '.gitignore', '.codegraph/\n')
+        self.write(repo, '.gitignore', '.codegraph/\n/retro/\n/pending/\n')
         self.copy_agents(repo)
         code, pares, _ = run(repo)
         self.assertEqual(code, 0, pares)
@@ -139,13 +139,39 @@ class ChecarTest(unittest.TestCase):
         self.assertIn(('old skill', 'WARN'), pares)
         self.assertTrue(any(it['item'] == 'settings.json' and 'extraKnownMarketplaces' in it['detalhe'] for it in itens))
 
+    def test_gitignore_requires_retro_and_the_pending_folder(self):
+        """`/retro/` and `/pending/` are local to the clone: absent from .gitignore, or still tracked = MISSING."""
+        repo = os.path.join(self.tmp, 'repo')
+        shutil.copytree(DEMO, repo)
+        self.write(repo, 'CLAUDE.md', '# map\n')
+        self.write(repo, '.claude/settings.json', json.dumps(SETTINGS))
+        self.copy_agents(repo)
+
+        def ignore(text):
+            self.write(repo, '.gitignore', text)
+            code, _, itens = run(repo)
+            return code, sorted(it['detalhe'] for it in itens if it['item'] == '.gitignore' and it['estado'] == 'MISSING')
+
+        code, missing = ignore('.codegraph/\n')
+        self.assertEqual(code, 1)
+        self.assertEqual(len(missing), 2, missing)
+        self.assertTrue(missing[0].startswith('/pending/ not in .gitignore') and missing[1].startswith('/retro/ not in'), missing)
+        self.assertEqual(ignore('.codegraph/\nretro\npending/\n'), (0, []))  # any spelling of the folder
+        # ignored but still tracked: the files stay in every clone until `git rm --cached`
+        subprocess.run(['git', 'init', '-q', repo], check=True)
+        self.write(repo, 'pending/P-001-x.md', 'x\n')
+        subprocess.run(['git', '-C', repo, 'add', '-f', 'pending/P-001-x.md'], check=True)
+        code, missing = ignore('.codegraph/\n/retro/\n/pending/\n')
+        self.assertEqual(code, 1)
+        self.assertIn('git rm -r --cached pending', missing[0])
+
     def test_agent_templates_missing_outdated_owner_and_ok(self):
         """Explore.md and Plan.md copied from skills/adopt/templates/agents/: MISSING, OUTDATED (older marker), WARN (no marker), OK."""
         repo = os.path.join(self.tmp, 'repo')
         shutil.copytree(DEMO, repo)
         self.write(repo, 'CLAUDE.md', '# map\n')
         self.write(repo, '.claude/settings.json', json.dumps(SETTINGS))
-        self.write(repo, '.gitignore', '.codegraph/\n')
+        self.write(repo, '.gitignore', '.codegraph/\n/retro/\n/pending/\n')
         tpl_dir = os.path.join(PLUGIN, 'skills', 'adopt', 'templates', 'agents')
         self.assertEqual(sorted(os.listdir(tpl_dir)), ['Explore.md', 'Plan.md'])
         code, pares, itens = run(repo)
