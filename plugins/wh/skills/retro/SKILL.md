@@ -7,7 +7,9 @@ description: Retrospective of a session: candidates to improve the agent's envir
 
 You suggest improvements to the agent's **environment** (docs, checks, skills, tools) for the next runs. Nothing is applied: the output is a list of candidates.
 
-Argument: none (present to the user in the chat) or `file: <path>` (write it there, in the format of `${CLAUDE_PLUGIN_ROOT}/skills/implementation/REPORT.md` § Retro: ≤ 40 lines, ≤ 6 candidates, one table; path outside your agent worktree: `Write` is refused, write through Bash with `cat > <path> <<'EOF'`). It may name a session; otherwise the current one, from memory, without rereading large logs.
+Argument: none, or `file: <path>` (from the `/wh:implementation` agents: a copy also goes there, ≤ 40 lines, ≤ 6 candidates). It may name a session; otherwise the current one, from memory, without rereading large logs.
+
+The retro is written in **English**, whatever the language of the session, and is **always saved** in the clone's `retro/` folder (gitignored, local to the clone), one new file per retro, named by the current timestamp.
 
 ## Steps
 
@@ -20,7 +22,10 @@ Argument: none (present to the user in the chat) or `file: <path>` (write it the
    - **No-op:** a steering instruction that does not change behavior.
    - **Information access:** crucial information the agent did not have (server log, reading an external service).
 2. Severity by the cost of the problem in the session. Each candidate: category, evidence, proposal (file and change) and who applies it (repo / owner, outside the repo).
-3. Present to the user in severity order, or write to the file from the argument.
+3. Save: `${CLAUDE_PLUGIN_ROOT}/skills/retro/scripts/retro_path.sh [<label>]` prints the path of the new file, `<clone root>/retro/<YYYY-MM-DD-HHMMSS>[-<label>].md` (the timestamp is the script's clock, never typed by you; it creates the folder and resolves an agent worktree to its clone). Label: none, or with `file: …/.impl/<slug>/retros/<name>.md`, `<slug>-<name>`. Write the retro to that path in the format of `${CLAUDE_PLUGIN_ROOT}/skills/implementation/REPORT.md` § Retro (title and one table, severity order). As a subagent (in an agent worktree, or in the clone): `Write` of the retro is refused, write through Bash with `cat > <path> <<'EOF'`.
+4. With `file: <path>`: `cp <saved path> <path>`. Without it: present the candidates to the user in severity order, ending with the saved path.
+
+**Done when the file exists under `retro/` at the path the script printed (and, with `file:`, its copy at `<path>`).**
 
 ## Reference
 

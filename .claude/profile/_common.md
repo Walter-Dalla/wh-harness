@@ -20,11 +20,9 @@ Agent and integration worktrees have no `.codegraph/` (gitignored): query the cl
 `CLAUDE.md` — map and rules (English only; skill = procedure, profile = facts; version bump on skill/hook change) [CLAUDE.md]
 `docs/MANUAL.md` — full map, mechanisms, source formats, extending, known limits [CLAUDE.md]
 `README.md` — short overview [CLAUDE.md]
-`docs/pending/` — owner's open items, one file per item (`docs/pending/README.md` § Format) [docs/pending/README.md]
+`pending/` — owner's open items, one file per item, gitignored (format: `plugins/wh/skills/implementation/PENDING.md`) [owner]
+`retro/` — retros saved by `/wh:retro`, one timestamped file each, gitignored [owner]
 `docs/testes/` — test-drive reports [owner]
-
-## Pending
-`docs/pending/` [owner]
 
 ## Limits
 No agent touches `~/.claude/` (user config, hooks), files outside the repo and the scratchpad, or the `examples/demo` fixtures beyond what a test needs [owner].

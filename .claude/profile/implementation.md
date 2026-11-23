@@ -41,7 +41,7 @@ Always: `CLAUDE.md`, `docs/MANUAL.md`, `plugins/wh/skills/implementation/SKILL.m
 — [owner]
 
 ## Closing docs
-Changelog: — . Version: `plugins/wh/.claude-plugin/plugin.json` `version` bump + `docs/MANUAL.md` [CLAUDE.md]. Open items: `docs/pending/` [docs/pending/README.md]. Feature map: — . Cleanup: — (no `cleanup.md`) [owner]
+Changelog: — . Version: `plugins/wh/.claude-plugin/plugin.json` `version` bump + `docs/MANUAL.md` [CLAUDE.md]. Open items: `pending/` (gitignored) [owner]. Feature map: — . Cleanup: — (no `cleanup.md`) [owner]
 
 ## Report
 `docs/reports/<date>-<slug>.md` [owner]

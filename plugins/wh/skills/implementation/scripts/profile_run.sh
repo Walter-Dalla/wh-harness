@@ -2,21 +2,23 @@
 # Runs one key of the `## Commands` section of the implementation profile, so the verdict is the command's own
 # exit and never the exit of a filter piped after it.
 #
-#   profile_run.sh <key> [<worktree>=.] [--port <p>] [--slug <s>] [--log <file>] [--print]
+#   profile_run.sh <key> [<worktree>=.] [--port <p>] [--slug <s>] [--log <file>] [--wait <s>] [--print]
 #
 # <key>: build, suite, typecheck, service or health. Reads <worktree>/.claude/profile/implementation.md, section
 # `## Commands` (up to the next `## ` heading), the line `<key>: ` followed by a command in backticks or `—`.
 # `<port>` and `<slug>` in the command are replaced by --port and --slug.
 # Run: `bash -c <command>` in <worktree>, stdout and stderr to the log (--log, else a temporary file removed at
 # the end); then the last 30 lines of the log and, as the last line, `PROFILE_RUN <key>: exit <n>`; exits <n>.
+# `health` is retried once a second while it fails, for up to --wait seconds (default 20; 0 = a single try): a
+# service started a moment ago is not up yet. The other keys run once.
 # `—`: prints `PROFILE_RUN <key>: skipped`, exit 0. --print: prints only the command (or `—`), exit 0.
-# Exit 2 with `PROFILE_RUN FAILED: <reason>`: bad call (including a --port that is not digits or a --slug that is
-# not kebab-case), unknown key, profile or section missing, key line missing or malformed, `<port>`/`<slug>` left
+# Exit 2 with `PROFILE_RUN FAILED: <reason>`: bad call (including a --port or --wait that is not digits, a --slug
+# that is not kebab-case, --wait on a key other than health), unknown key, profile or section missing, key line missing or malformed, `<port>`/`<slug>` left
 # in the command.
 set -u
 
 fail() { echo "PROFILE_RUN FAILED: $*"; exit 2; }
-usage() { fail "usage: profile_run.sh <build|suite|typecheck|service|health> [<worktree>] [--port <p>] [--slug <s>] [--log <file>] [--print]"; }
+usage() { fail "usage: profile_run.sh <build|suite|typecheck|service|health> [<worktree>] [--port <p>] [--slug <s>] [--log <file>] [--wait <s>] [--print]"; }
 
 [ $# -ge 1 ] || usage
 key=$1; shift
@@ -25,12 +27,12 @@ case $key in
   *) fail "unknown key '$key' (build, suite, typecheck, service, health)" ;;
 esac
 
-wt=; port=; slug=; log=; print=0
+wt=; port=; slug=; log=; wait=; print=0
 while [ $# -gt 0 ]; do
   case $1 in
-    --port|--slug|--log)
+    --port|--slug|--log|--wait)
       [ $# -ge 2 ] && [ -n "$2" ] || fail "$1 without a value"
-      case $1 in --port) port=$2 ;; --slug) slug=$2 ;; --log) log=$2 ;; esac
+      case $1 in --port) port=$2 ;; --slug) slug=$2 ;; --log) log=$2 ;; --wait) wait=$2 ;; esac
       shift 2 ;;
     --print) print=1; shift ;;
     -*) fail "unknown option $1" ;;
@@ -41,6 +43,8 @@ done
 [ -d "$wt" ] || fail "worktree $wt is not a folder"
 [ -z "$port" ] || [[ $port =~ ^[0-9]+$ ]] || fail "--port '$port' is not a number"
 [ -z "$slug" ] || [[ $slug =~ ^[a-z0-9-]+$ ]] || fail "--slug '$slug' is not kebab-case"
+[ -z "$wait" ] || [[ $wait =~ ^[0-9]+$ ]] || fail "--wait '$wait' is not a number of seconds"
+[ -z "$wait" ] || [ "$key" = health ] || fail "--wait only applies to health, not '$key'"
 
 profile=$wt/.claude/profile/implementation.md
 [ -f "$profile" ] || fail "profile $profile missing"
@@ -86,8 +90,13 @@ if [ -z "$log" ]; then
   log=$(mktemp) || fail "cannot create a temporary log"
   trap 'rm -f "$log"' EXIT
 fi
-(cd "$wt" && bash -c "$cmd") > "$log" 2>&1
-code=$?
+deadline=$((SECONDS + ${wait:-20}))
+while :; do
+  (cd "$wt" && bash -c "$cmd") > "$log" 2>&1
+  code=$?
+  if [ "$code" -eq 0 ] || [ "$key" != health ] || [ "$SECONDS" -ge "$deadline" ]; then break; fi
+  sleep 1
+done
 tail -n 30 "$log"
 echo "PROFILE_RUN $key: exit $code"
 exit "$code"

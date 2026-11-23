@@ -22,6 +22,11 @@ import unicodedata
 CONFIG = os.path.join('.claude', 'profile', 'context.json')
 CACHE_DIR = os.environ.get('WH_CACHE_DIR') or os.path.join(os.path.expanduser('~'), '.cache', 'walter-harness')
 GRAPH_VERSION = 2
+# Frames the harness puts in front of a prompt that is not the user's words: a subagent's hand-back, a message from
+# another session, a task notification. Their text matched glossary words by accident in every hand-back of two
+# 2026-11 sessions and changed no decision, so the hook stays silent for them.
+NOT_A_REQUEST = ('[Subagent hand-back]', 'Another Claude session sent a message:', '<agent-message',
+                 '<cross-session-message', '<task-notification')
 MAX_NGRAM = 5
 DEFAULTS = {
     'glossario': 'docs/GLOSSARIO.md',
@@ -451,6 +456,8 @@ def main(argv):
     except ValueError:
         return
     prompt = event.get('prompt') or ''
+    if prompt.lstrip().startswith(NOT_A_REQUEST):
+        return
     root = find_root(event.get('cwd') or os.getcwd())
     if not root:
         return

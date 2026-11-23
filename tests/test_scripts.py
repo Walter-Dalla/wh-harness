@@ -3,6 +3,7 @@
     python3 -m unittest discover -s tests
 """
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -302,6 +303,65 @@ class ScriptsTest(unittest.TestCase):
         self.assertEqual(code, 0, out2)
         with open(os.path.join(self.repo, '.git', 'info', 'exclude'), encoding='utf-8') as fh:
             self.assertEqual(lines, fh.read().splitlines())
+        self.assertEqual((env['REUSED'], env['AHEAD'], env['BEHIND']), ('no', '0', '0'))
+        with open(os.path.join(self.repo, '.impl', 'demo', 'env'), encoding='utf-8') as fh:
+            self.assertEqual(fh.read(), out2.replace('ENV OK\n', ''))  # the fact sheet on disk, for lane_prompt.sh
+        self.assertIn('REUSED=worktree\n', out2)
+
+    def env_facts(self, *args):
+        code, out = run(ENV, self.repo, *args, '--no-pull', PATH='/usr/bin:/bin')
+        self.assertEqual(code, 0, out)
+        return dict(l.split('=', 1) for l in out.splitlines() if '=' in l)
+
+    def test_impl_env_brings_a_landed_leftover_branch_to_main(self):
+        """impl/<slug> left by a run that landed (nothing ahead of main, main moved on): no stale base."""
+        self.bare_remote()
+        git(self.repo, 'branch', 'impl/demo')
+        self.write('new.txt')
+        self.commit_all('main moved')
+        git(self.repo, 'push', '-q', 'origin', 'main')
+        env = self.env_facts('demo')
+        self.assertEqual((env['REUSED'], env['AHEAD'], env['BEHIND']), ('fast-forwarded', '0', '0'))
+        self.assertEqual(git(env['INTWT'], 'rev-parse', 'HEAD'), git(self.repo, 'rev-parse', 'main'))
+        self.write('newer.txt')  # the worktree is still there and main moves again: same answer
+        self.commit_all('main moved again')
+        git(self.repo, 'push', '-q', 'origin', 'main')
+        env = self.env_facts('demo')
+        self.assertEqual((env['REUSED'], env['BEHIND']), ('fast-forwarded', '0'))
+        self.assertTrue(os.path.isfile(os.path.join(env['INTWT'], 'newer.txt')))
+
+    def test_impl_env_resumes_a_branch_ahead_and_refuses_a_diverged_one(self):
+        self.bare_remote()
+        git(self.repo, 'switch', '-q', '-c', 'impl/demo')
+        self.write('work.txt')
+        self.commit_all('demo-1: work')
+        git(self.repo, 'switch', '-q', 'main')
+        env = self.env_facts('demo')  # ahead of main, not behind, no worktree: a run to resume
+        self.assertEqual((env['REUSED'], env['AHEAD'], env['BEHIND']), ('branch', '1', '0'))
+        self.write('new.txt')
+        self.commit_all('main moved')
+        git(self.repo, 'push', '-q', 'origin', 'main')
+        env = self.env_facts('demo')  # the worktree is there: the run goes on, the counts say main moved
+        self.assertEqual((env['REUSED'], env['AHEAD'], env['BEHIND']), ('worktree', '1', '1'))
+        git(self.repo, 'worktree', 'remove', '--force', env['INTWT'])
+        shutil.rmtree(os.path.join(self.repo, '.impl'))
+        code, out = run(ENV, self.repo, 'demo', '--no-pull', PATH='/usr/bin:/bin')
+        self.assertEqual(code, 1, out)
+        self.assertIn('ENV FAILED: impl/demo already exists, 1 commit(s) ahead of main and 1 behind', out)
+        self.assertFalse(os.path.exists(os.path.join(self.repo, '.impl')))  # refused before anything is written
+
+    def test_impl_env_names_the_base_branch_option_and_a_base_missing_on_the_remote(self):
+        self.bare_remote()
+        git(self.repo, 'switch', '-q', '-c', 'feat/base')
+        code, out = run(ENV, self.repo, 'demo', '--no-pull')
+        self.assertEqual(code, 1)
+        self.assertIn("pass --main feat/base", out)
+        code, out = run(ENV, self.repo, 'demo', '--no-pull', '--main', 'feat/base')
+        self.assertEqual(code, 1)
+        self.assertIn('ENV FAILED: feat/base is not on origin', out)
+        git(self.repo, 'push', '-q', 'origin', 'feat/base')
+        env = self.env_facts('demo', '--main', 'feat/base')
+        self.assertEqual(env['MAIN'], 'feat/base')
 
     def test_impl_env_refuses_dirty_clone_wrong_branch_and_bad_slug(self):
         self.bare_remote()
@@ -413,6 +473,38 @@ class ScriptsTest(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn('ACCEPTANCE FAILED: unclosed', out)
 
+    def test_acceptance_reads_only_item_headings(self):
+        """A `## Notes` heading in a plan or a lane is not an item, and its text is not the previous item's."""
+        plan = self.lane('# t\n| Id | Item | Files | Type | Acceptance |\n|---|---|---|---|---|\n| demo-1 | a | `x` | internal | `true` |\n'
+                         '## Notes for the docs\nAcceptance: `false`.\n## QA-final-02 · fix · internal\nAcceptance: `true`.\n'
+                         '## demo-3 · no command · internal\n## Proof\nAcceptance: `false`.\n')
+        code, out = self.accept(plan, self.repo)
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out.splitlines(), ['demo-1 · exit 0 · true', 'QA-final-02 · exit 0 · true',
+                                            'demo-3 · no Acceptance command', 'ACCEPTANCE: 2 green, 0 red, 1 without command'])
+
+    def test_acceptance_warns_when_a_green_command_names_a_missing_test_file(self):
+        self.write('tests/a.test.js')
+        lane = self.lane('# f1\n## demo-1 · a · internal\nAcceptance: `true tests/a.test.js tests/new.test.js`.\n'
+                         '## demo-2 · b · internal\nAcceptance: `test -f tests/new.test.js && true tests/new.test.js`.\n'
+                         '## demo-3 · c · internal\nAcceptance: `! test -f tests/gone_test.py`.\n'
+                         '## demo-4 · d · internal\nAcceptance: `true tests/a.test.js src/missing.js`.\n')
+        code, out = self.accept(lane, self.repo)
+        self.assertEqual(code, 0, out)
+        self.assertEqual([l for l in out.splitlines() if 'WARNING' in l],
+                         ['demo-1 · WARNING · test file tests/new.test.js does not exist: exit 0 may be the runner '
+                          'skipping it (guard the command: test -f tests/new.test.js && …)'])
+        self.assertNotIn(' · exit 0 · ', [l for l in out.splitlines() if 'WARNING' in l][0])  # wave_prep.sh counts those
+        self.assertIn('demo-2 · exit 1 · ', out)
+        self.assertIn('ACCEPTANCE: 3 green, 1 red, 0 without command', out)
+
+    def test_acceptance_log_holds_the_command_its_output_and_the_exit(self):
+        lane = self.lane('# f1\n## demo-1 · a · internal\nAcceptance: `echo out; echo err >&2; exit 4`.\n')
+        logs = os.path.join(self.tmp, 'acceptance')
+        self.accept(lane, self.repo, '--log', logs, '--lane', 'f1')
+        with open(os.path.join(logs, 'f1-demo-1.log'), encoding='utf-8') as fh:
+            self.assertEqual(fh.read(), '$ echo out; echo err >&2; exit 4\nout\nerr\n\nexit 4\n')
+
     def test_every_python_script_compiles_without_warning(self):
         import glob
         files = glob.glob(os.path.join(ROOT, 'plugins', 'wh', '**', '*.py'), recursive=True)
@@ -498,12 +590,11 @@ class ScriptsTest(unittest.TestCase):
         intake = os.path.join(SCRIPTS, 'intake.sh')
 
         def facts(*args):
-            code, out = run(intake, self.tmp, self.repo, *args)
+            code, out = run(intake, self.tmp, self.repo, '--dir', 'docs/pending', *args)  # the owner's folder
             self.assertEqual(code, 0, out)
             self.assertEqual(out.splitlines()[-1], 'INTAKE OK')
             return dict(l.split('=', 1) for l in out.splitlines() if '=' in l)
 
-        self.write('.claude/profile/_common.md', '# Common\n\n## Pending\n`docs/pending/`\n\n## Limits\n`other/`\n')
         self.write('docs/pending/P-001-alpha.md', '---\nid: P-001\nstatus: open\n---\n')
         self.write('docs/pending/P-002-beta.md', '---\nid: P-002\nstatus: dropped\n---\n')
         self.write('docs/pending/P-003-gamma.md', '---\nid: P-003\nstatus: open\n---\n')
@@ -520,7 +611,10 @@ class ScriptsTest(unittest.TestCase):
         self.assertEqual((env['INTAKE'], env['PENDING'], env['SLUG']), ('raw', '', '—'))
         env = facts()
         self.assertEqual((env['INTAKE'], env['PENDING'], env['SLUG']), ('file', f'{alpha} {gamma}', 'pending-001-003'))
-        self.assertEqual(run(intake, self.tmp, self.repo, '--next'), (0, 'P-004\n'))
+        self.assertEqual(run(intake, self.tmp, self.repo, '--dir', 'docs/pending', '--next'), (0, 'P-004\n'))
+        code, out = run(intake, self.tmp, self.repo, '--dir', 'nowhere')
+        self.assertEqual((code, 'INTAKE FAILED: no folder' in out), (1, True), out)
+        self.assertFalse(os.path.exists(os.path.join(self.repo, 'pending')))  # a redirected call never creates pending/
         self.write('docs/pending/P-005-delta.md', '---\nid: P-005\nstatus: opened\n---\n')
         env = facts()
         self.assertEqual(env['PENDING'], f'{alpha} {gamma}')  # `status: opened` is not open
@@ -528,11 +622,16 @@ class ScriptsTest(unittest.TestCase):
         self.assertEqual((env['INTAKE'], env['PENDING']), ('file', f'{alpha} {gamma}'))  # punctuation around an id
         env = facts('next')
         self.assertEqual(env['INTAKE'], 'raw')  # the word `next` typed by the owner is raw text
+        for words in (('todas', 'as', 'pendencias'), ('all',), ('All', 'the', 'open', 'items.'), ('todas', 'as', 'pendências')):
+            env = facts(*words)  # the owner asking for everything in words = no argument
+            self.assertEqual((env['INTAKE'], env['PENDING']), ('file', f'{alpha} {gamma}'), words)
+        self.assertEqual(facts('the', 'open', 'items')['INTAKE'], 'raw')  # no "all" word
+        self.assertEqual(facts('all', 'buttons', 'blue')['INTAKE'], 'raw')  # a request that starts with "all"
 
         empty = os.path.join(self.tmp, 'empty')
         os.makedirs(empty)
         self.assertEqual(run(intake, self.tmp, empty, '--next'), (0, 'P-001\n'))
-        self.assertTrue(os.path.isdir(os.path.join(empty, 'docs', 'pending')))
+        self.assertTrue(os.path.isdir(os.path.join(empty, 'pending')))  # the default folder
         code, out = run(intake, self.tmp, empty)
         self.assertEqual(code, 1, out)
         self.assertIn('INTAKE FAILED: no open pending file', out)
@@ -551,6 +650,54 @@ class ScriptsTest(unittest.TestCase):
         self.assertEqual(run(intake, self.tmp, self.repo, '--next'), (0, 'P-005\n'))
         self.write('docs/pending/P-002-y.md', '---\nid: P-002\nstatus: open\n---\n')  # uncommitted, lower
         self.assertEqual(run(intake, self.tmp, self.repo, '--next'), (0, 'P-005\n'))
+
+    def test_intake_default_folder_is_local_to_the_clone(self):
+        """No `--dir`: `pending/`, excluded from git; a landed file in `done/` and one git once tracked elsewhere keep their ids."""
+        intake = os.path.join(SCRIPTS, 'intake.sh')
+        self.write('docs/pending/P-006-old.md', '---\nid: P-006\nstatus: open\n---\n')
+        self.commit_all('tracked before the folder became local')
+        git(self.repo, 'rm', '-q', 'docs/pending/P-006-old.md')
+        git(self.repo, 'commit', '-q', '-m', 'untrack')
+        self.write('pending/P-002-open.md', '---\nid: P-002\nstatus: open\n---\n')
+        self.write('pending/done/P-009-landed.md', '---\nid: P-009\nstatus: done\n---\n')
+        code, out = run(intake, self.tmp, self.repo)
+        self.assertEqual(code, 0, out)
+        pend = os.path.join(os.path.realpath(self.repo), 'pending')
+        self.assertIn('PENDING_DIR=' + pend, out)
+        self.assertIn('PENDING=' + os.path.join(pend, 'P-002-open.md') + '\n', out)  # done/ is not open
+        self.assertEqual(run(intake, self.tmp, self.repo, '--next'), (0, 'P-010\n'))
+        self.assertEqual(git(self.repo, 'status', '--porcelain'), '')  # never shows up in git
+        with open(os.path.join(self.repo, '.git', 'info', 'exclude'), encoding='utf-8') as fh:
+            self.assertEqual(fh.read().count('/pending/\n'), 1)  # written once, not once per call
+        os.remove(os.path.join(pend, 'done', 'P-009-landed.md'))
+        self.assertEqual(run(intake, self.tmp, self.repo, '--next'), (0, 'P-007\n'))  # the git history alone
+
+    # ---- retro_path.sh
+
+    def test_retro_path_is_timestamped_in_the_clone_and_ignored(self):
+        retro = os.path.join(ROOT, 'plugins', 'wh', 'skills', 'retro', 'scripts', 'retro_path.sh')
+        real = os.path.realpath(self.repo)
+        code, out = run(retro, self.repo)
+        self.assertEqual(code, 0, out)
+        self.assertRegex(out, '^' + re.escape(real) + r'/retro/\d{4}-\d\d-\d\d-\d{6}\.md\n$')
+        self.assertTrue(os.path.isdir(os.path.join(self.repo, 'retro')))
+        open(out.strip(), 'w').close()
+        self.assertEqual(git(self.repo, 'status', '--porcelain'), '')
+        wt = os.path.join(self.tmp, 'wt')
+        git(self.repo, 'worktree', 'add', '-q', wt, '-b', 'lane')
+        code, out = run(retro, wt, 'demo-f1')  # an agent worktree resolves to its clone
+        self.assertEqual(code, 0, out)
+        self.assertRegex(out, '^' + re.escape(real) + r'/retro/\d{4}-\d\d-\d\d-\d{6}-demo-f1\.md\n$')
+        with open(os.path.join(self.repo, '.git', 'info', 'exclude'), encoding='utf-8') as fh:
+            self.assertEqual(fh.read().count('/retro/\n'), 1)
+        code, out = run(retro, self.repo, 'a b')
+        self.assertEqual(code, 1, out)
+        self.assertIn('RETRO FAILED: label', out)
+        plain = os.path.join(self.tmp, 'plain')  # outside git: the cwd
+        os.makedirs(plain)
+        code, out = run(retro, plain)
+        self.assertEqual(code, 0, out)
+        self.assertTrue(out.startswith(os.path.realpath(plain) + '/retro/'), out)
 
     # ---- agent_chat.sh
 

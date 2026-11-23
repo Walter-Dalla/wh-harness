@@ -98,6 +98,17 @@ class PromptGraphTest(unittest.TestCase):
         self.assertEqual(self.hook('orders'), '')
         self.assertEqual(self.hook('the pickup slot is wrong for late orders', WH_PROMPT_GRAPH='0'), '')
 
+    def test_hook_is_silent_for_prompts_that_are_not_the_users_words(self):
+        """A subagent hand-back, a message from another session and a task notification match words by accident."""
+        text = 'the pickup slot is wrong for late orders'
+        for frame in ('[Subagent hand-back] The text below is the final report of a subagent.\n  ' + text,
+                      'Another Claude session sent a message:\n<agent-message from="a1">\n[Subagent hand-back] ' + text,
+                      '<agent-message from="a1">' + text + '</agent-message>',
+                      '<cross-session-message from="x">' + text + '</cross-session-message>',
+                      '\n<task-notification>\n<summary>' + text + '</summary>\n</task-notification>'):
+            self.assertEqual(self.hook(frame), '', frame[:40])
+        self.assertIn('orders.md', self.hook('about the hand-back: ' + text))  # the user's own words still match
+
     def test_hook_finds_config_from_a_subdirectory(self):
         sub = os.path.join(self.repo, 'src', 'deep')
         os.makedirs(sub)

@@ -203,6 +203,19 @@ class Check:
             self.add('OK', '.gitignore', '.codegraph/')
         else:
             self.add('MISSING' if has_cg else 'WARN', '.gitignore', '.codegraph/ not in .gitignore')
+        ignored = {l.strip('/') for l in lines}
+        for what, rel in (('retro', 'retro'), ('pending', 'pending')):
+            if rel not in ignored:
+                self.add('MISSING', '.gitignore', '/%s/ not in .gitignore (%s folder, local to the clone: /wh:adopt plugin adds it)' % (rel, what))
+                continue
+            try:
+                tracked = subprocess.run(['git', '-C', self.root, 'ls-files', '--', rel], capture_output=True, text=True).stdout.strip()
+            except OSError:
+                tracked = ''
+            if tracked:
+                self.add('MISSING', '.gitignore', '%s/ is ignored but still has tracked files: git rm -r --cached %s' % (rel, rel))
+            else:
+                self.add('OK', '.gitignore', '/%s/' % rel)
         exclude = read(self.p('.git', 'info', 'exclude')) or ''
         if '.impl/' not in {l.strip() for l in exclude.splitlines()} and '.impl/' not in lines:
             self.add('WARN', 'exclude', '.impl/ not excluded yet (/wh:implementation does it once per clone)')
@@ -245,6 +258,8 @@ class Check:
                 continue
             for tok in set(re.findall(r'`([^`\s]+)`', text)):
                 if not re.search(r'[/\\]|\.(md|json|ya?ml|toml|sh|py|cs|ts|js|csproj|sln)$', tok) or re.search(r'[<>*$§{}|…]|^https?:|^[-./~]', tok):
+                    continue
+                if tok.strip('/') in ('pending', 'retro'):  # local to the clone (gitignored): absent in a fresh one
                     continue
                 bare = not re.search(r'[/\\]', tok)  # a bare file name may live anywhere in the repo or the plugin
                 if not os.path.exists(self.p(tok.rstrip('/'))) and not (bare and tok in self.basenames()):

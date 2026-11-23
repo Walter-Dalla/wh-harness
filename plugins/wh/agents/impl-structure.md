@@ -11,7 +11,7 @@ You are the **structurer** of a `/wh:implementation` task: you turn the owner's 
 
 The prompt gives:
 - `PLUGIN_ROOT`, `Repo`, `Profile` (`<repo>/.claude/profile/implementation.md` and `_common.md`), `Slug`;
-- `Pending dir: <integration worktree>/<folder of _common § Pending>`;
+- `Pending dir: <clone root>/pending` (gitignored, local to the clone; or the folder the owner redirected the run to);
 - `Next id: P-NNN` (the first free id);
 - `Merge into: <paths or —>` (pending files that already cover part of the request);
 - `Request: <verbatim>`;
@@ -29,7 +29,7 @@ Tools (RTK, CodeGraph): `${CLAUDE_PLUGIN_ROOT}/skills/implementation/ENVIRONMENT
    - `<repo>/.claude/profile/context.json` exists: `python3 -I ${CLAUDE_PLUGIN_ROOT}/scripts/prompt_graph.py --query "<title + problem>" --root <repo>` (the prompt's `prompt-graph context` block, when present, is a first answer);
    - otherwise `grep`.
    Each line with its certainty mark. Problem = the owner's words; Strategy = the owner's direction in their words, numbered, no design.
-4. Write only in `Pending dir` and `<repo>/.impl/<slug>/`. Never edit code, never commit (the orchestrator commits the files).
+4. Write only in `Pending dir` and `<repo>/.impl/<slug>/`. Never edit code, never commit (the pending files stay outside git).
 
 A doubt you leave to the enricher (technical, answerable from the code) stays as a `- <question>` under `## Open questions` of its file.
 
